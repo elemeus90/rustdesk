@@ -60,15 +60,183 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   Widget build(BuildContext context) {
     super.build(context);
     final isIncomingOnly = bind.isIncomingOnly();
+    final isOutgoingOnly = bind.isOutgoingOnly();
+    // TajDesk: special modes keep the original layout (less complexity)
+    if (isIncomingOnly || isOutgoingOnly) {
+      return _buildBlock(
+          child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          buildLeftPane(context),
+          if (!isIncomingOnly) const VerticalDivider(width: 1),
+          if (!isIncomingOnly) Expanded(child: buildRightPane(context)),
+        ],
+      ));
+    }
+    // TajDesk: new layout — horizontal top bar + central content area
     return _buildBlock(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          buildTajTopBar(context),
+          const Divider(height: 1, thickness: 1),
+          Expanded(child: buildTajMainArea(context)),
+        ],
+      ),
+    );
+  }
+
+  // TajDesk: horizontal top bar with logo, ID, password and settings
+  Widget buildTajTopBar(BuildContext context) {
+    final textColor = Theme.of(context).textTheme.titleLarge?.color;
+    return Container(
+      height: 120,
+      color: Theme.of(context).colorScheme.background,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      child: ChangeNotifierProvider.value(
+        value: gFFI.serverModel,
         child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        buildLeftPane(context),
-        if (!isIncomingOnly) const VerticalDivider(width: 1),
-        if (!isIncomingOnly) Expanded(child: buildRightPane(context)),
-      ],
-    ));
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Logo block
+            SizedBox(
+              width: 64,
+              child: Align(
+                alignment: Alignment.center,
+                child: loadLogo(),
+              ),
+            ),
+            const SizedBox(width: 14),
+            // App name + tagline
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  bind.mainGetAppNameSync(),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: textColor,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                Text(
+                  bind.isCustomClient() ? 'tajdesk.tj' : '',
+                  style: TextStyle(
+                    fontSize: 11,
+                    letterSpacing: 0.6,
+                    color: (textColor ?? Colors.grey).withOpacity(0.55),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(width: 32),
+            // ID + password — central card
+            Expanded(
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: MyTheme.accent.withOpacity(0.25),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(child: buildIDBoard(context)),
+                    Container(
+                      width: 1,
+                      height: 40,
+                      color: (textColor ?? Colors.grey).withOpacity(0.18),
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    Expanded(child: buildPasswordBoard(context)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Settings icon
+            _buildTajSettingsIcon(context),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTajSettingsIcon(BuildContext context) {
+    final textColor = Theme.of(context).textTheme.titleLarge?.color;
+    RxBool hover = false.obs;
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: () {
+        if (DesktopSettingPage.tabKeys.isNotEmpty) {
+          DesktopSettingPage.switch2page(DesktopSettingPage.tabKeys[0]);
+        }
+      },
+      onHover: (v) => hover.value = v,
+      child: Tooltip(
+        message: translate('Settings'),
+        child: Obx(() => Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: hover.value
+                    ? MyTheme.accent.withOpacity(0.15)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(
+                Icons.settings_outlined,
+                size: 22,
+                color: hover.value ? MyTheme.accent : textColor?.withOpacity(0.7),
+              ),
+            )),
+      ),
+    );
+  }
+
+  // TajDesk: central area — help cards + connection page
+  Widget buildTajMainArea(BuildContext context) {
+    return Container(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Help / install / warning cards (UAC notice etc.)
+          ChangeNotifierProvider.value(
+            value: gFFI.serverModel,
+            child: FutureBuilder<Widget>(
+              future: Future.value(
+                  Obx(() => buildHelpCards(stateGlobal.updateUrl.value))),
+              builder: (_, data) {
+                if (data.hasData) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: data.data!,
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+          // Preset password warning (if any)
+          ChangeNotifierProvider.value(
+            value: gFFI.serverModel,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: buildPresetPasswordWarning(),
+            ),
+          ),
+          // Connection page (peer list + new connection form)
+          Expanded(child: buildRightPane(context)),
+        ],
+      ),
+    );
   }
 
   Widget _buildBlock({required Widget child}) {
