@@ -20,6 +20,7 @@ import 'package:flutter_hbb/plugin/ui_manager.dart';
 import 'package:flutter_hbb/utils/multi_window_manager.dart';
 import 'package:flutter_hbb/utils/platform_channel.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:window_manager/window_manager.dart';
@@ -61,7 +62,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     super.build(context);
     final isIncomingOnly = bind.isIncomingOnly();
     final isOutgoingOnly = bind.isOutgoingOnly();
-    // TajDesk: special modes keep the original layout (less complexity)
+    // TajDesk: special modes keep the original layout
     if (isIncomingOnly || isOutgoingOnly) {
       return _buildBlock(
           child: Row(
@@ -73,40 +74,48 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         ],
       ));
     }
-    // TajDesk: new layout — horizontal top bar + central content area
+    // TajDesk: responsive layout — top bar with ID/Pass that drops below on narrow windows
     return _buildBlock(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          buildTajTopBar(context),
-          const Divider(height: 1, thickness: 1),
-          Expanded(child: buildTajMainArea(context)),
-        ],
-      ),
+      child: LayoutBuilder(builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 1000;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            buildTajTopBar(context, isNarrow: isNarrow),
+            if (isNarrow) buildTajIdPassRow(context),
+            Divider(
+                height: 1,
+                thickness: 1,
+                color: Colors.white.withOpacity(0.05)),
+            Expanded(child: buildTajMainArea(context)),
+          ],
+        );
+      }),
     );
   }
 
-  // TajDesk: horizontal top bar with logo, ID, password and settings
-  Widget buildTajTopBar(BuildContext context) {
+  // TajDesk: top bar — wide windows include ID/Pass inline, narrow ones drop them below
+  Widget buildTajTopBar(BuildContext context, {required bool isNarrow}) {
     final textColor = Theme.of(context).textTheme.titleLarge?.color;
     return Container(
-      height: 120,
+      height: isNarrow ? 64 : 84,
       color: Theme.of(context).colorScheme.background,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
       child: ChangeNotifierProvider.value(
         value: gFFI.serverModel,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Logo block
+            // Logo
             SizedBox(
-              width: 64,
+              width: 44,
+              height: 44,
               child: Align(
                 alignment: Alignment.center,
                 child: loadLogo(),
               ),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 12),
             // App name + tagline
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -114,57 +123,226 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               children: [
                 Text(
                   bind.mainGetAppNameSync(),
-                  style: TextStyle(
-                    fontSize: 18,
+                  style: GoogleFonts.inter(
+                    fontSize: 17,
                     fontWeight: FontWeight.w700,
                     color: textColor,
-                    letterSpacing: 0.3,
+                    letterSpacing: -0.2,
+                    height: 1.1,
                   ),
                 ),
-                Text(
-                  bind.isCustomClient() ? 'tajdesk.tj' : '',
-                  style: TextStyle(
-                    fontSize: 11,
-                    letterSpacing: 0.6,
-                    color: (textColor ?? Colors.grey).withOpacity(0.55),
+                if (bind.isCustomClient())
+                  Text(
+                    'tajdesk.tj',
+                    style: GoogleFonts.inter(
+                      fontSize: 10.5,
+                      letterSpacing: 1.6,
+                      color: MyTheme.accent.withOpacity(0.85),
+                      fontWeight: FontWeight.w500,
+                      height: 1.4,
+                    ),
                   ),
-                ),
               ],
             ),
-            const SizedBox(width: 32),
-            // ID + password — central card
-            Expanded(
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 6),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: MyTheme.accent.withOpacity(0.25),
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(child: buildIDBoard(context)),
-                    Container(
-                      width: 1,
-                      height: 40,
-                      color: (textColor ?? Colors.grey).withOpacity(0.18),
-                      margin: const EdgeInsets.symmetric(horizontal: 8),
-                    ),
-                    Expanded(child: buildPasswordBoard(context)),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
+            const Spacer(),
+            // Inline ID/Pass for wide windows
+            if (!isNarrow) ...[
+              _buildTajIdCard(context, width: 220),
+              const SizedBox(width: 10),
+              _buildTajPassCard(context, width: 200),
+              const SizedBox(width: 12),
+            ],
             // Settings icon
             _buildTajSettingsIcon(context),
           ],
         ),
       ),
+    );
+  }
+
+  // TajDesk: ID/Pass row for narrow windows (displayed under top bar)
+  Widget buildTajIdPassRow(BuildContext context) {
+    return Container(
+      color: Theme.of(context).colorScheme.background,
+      padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
+      child: ChangeNotifierProvider.value(
+        value: gFFI.serverModel,
+        child: Row(
+          children: [
+            Expanded(child: _buildTajIdCard(context)),
+            const SizedBox(width: 10),
+            Expanded(child: _buildTajPassCard(context)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTajIdCard(BuildContext context, {double? width}) {
+    final textColor = Theme.of(context).textTheme.titleLarge?.color;
+    final model = gFFI.serverModel;
+    return Container(
+      width: width,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: MyTheme.accent.withOpacity(0.22), width: 1),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 3,
+            height: 32,
+            decoration: BoxDecoration(
+              color: MyTheme.accent,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      translate('ID'),
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        letterSpacing: 1.5,
+                        color: textColor?.withOpacity(0.55),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    buildPopupMenu(context),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                GestureDetector(
+                  onDoubleTap: () {
+                    Clipboard.setData(
+                        ClipboardData(text: model.serverId.text));
+                    showToast(translate('Copied'));
+                  },
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Obx(() => Text(
+                          model.serverId.text.isEmpty
+                              ? '...'
+                              : model.serverId.text,
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: textColor,
+                            letterSpacing: 0.5,
+                            height: 1.1,
+                          ),
+                        )),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTajPassCard(BuildContext context, {double? width}) {
+    final textColor = Theme.of(context).textTheme.titleLarge?.color;
+    return Consumer<ServerModel>(
+      builder: (context, model, _) {
+        final showOneTime = model.approveMode != 'click' &&
+            model.verificationMethod != kUsePermanentPassword;
+        return Container(
+          width: width,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(10),
+            border:
+                Border.all(color: MyTheme.accent.withOpacity(0.22), width: 1),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 3,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: MyTheme.accent,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            translate('One-time Password'),
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              letterSpacing: 1.5,
+                              color: textColor?.withOpacity(0.55),
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (showOneTime)
+                          GestureDetector(
+                            onTap: () => bind.mainUpdateTemporaryPassword(),
+                            child: Icon(
+                              Icons.refresh,
+                              size: 14,
+                              color: textColor?.withOpacity(0.55),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    GestureDetector(
+                      onDoubleTap: () {
+                        if (showOneTime) {
+                          Clipboard.setData(ClipboardData(
+                              text: model.serverPasswd.text));
+                          showToast(translate('Copied'));
+                        }
+                      },
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          model.serverPasswd.text.isEmpty
+                              ? '...'
+                              : model.serverPasswd.text,
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: textColor,
+                            letterSpacing: 1,
+                            height: 1.1,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -193,7 +371,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               child: Icon(
                 Icons.settings_outlined,
                 size: 22,
-                color: hover.value ? MyTheme.accent : textColor?.withOpacity(0.7),
+                color:
+                    hover.value ? MyTheme.accent : textColor?.withOpacity(0.7),
               ),
             )),
       ),
