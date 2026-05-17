@@ -310,8 +310,9 @@ class _ConnectionPageState extends State<ConnectionPage>
             child: Column(
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Flexible(child: _buildRemoteIDTextField(context)),
+                _buildRemoteIDTextField(context),
               ],
             ).marginOnly(top: 22),
             SizedBox(height: 12),
