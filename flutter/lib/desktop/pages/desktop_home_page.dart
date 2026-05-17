@@ -33,7 +33,7 @@ class DesktopHomePage extends StatefulWidget {
   State<DesktopHomePage> createState() => _DesktopHomePageState();
 }
 
-const borderColor = Color(0xFF2F65BA);
+const borderColor = Color(0xFF3B82F6);
 
 class _DesktopHomePageState extends State<DesktopHomePage>
     with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
@@ -173,7 +173,21 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                     onHover: (value) => _editHover.value = value,
                   ),
                 ),
-              )
+              ),
+            // TajDesk footer
+            Positioned(
+              bottom: 8,
+              right: 12,
+              child: Text(
+                'tajdesk.tj',
+                style: TextStyle(
+                  fontSize: 11,
+                  letterSpacing: 0.5,
+                  color: (textColor ?? Colors.grey).withOpacity(0.45),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -610,8 +624,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
                 colors: [
-                  Color.fromARGB(255, 226, 66, 188),
-                  Color.fromARGB(255, 244, 114, 124),
+                  Color(0xFF3B82F6),
+                  Color(0xFF1D4ED8),
                 ],
               )),
               padding: EdgeInsets.all(20),
