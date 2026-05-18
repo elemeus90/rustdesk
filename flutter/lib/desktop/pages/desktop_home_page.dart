@@ -77,7 +77,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     // TajDesk: responsive layout — top bar with ID/Pass that drops below on narrow windows
     return _buildBlock(
       child: LayoutBuilder(builder: (context, constraints) {
-        final isNarrow = constraints.maxWidth < 1000;
+        final isNarrow = constraints.maxWidth < 700;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -103,12 +103,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
       child: ChangeNotifierProvider.value(
         value: gFFI.serverModel,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+        child: Stack(
           children: [
-            // Left: logo + name (fixed width on wide screens for centering balance)
-            SizedBox(
-              width: isNarrow ? null : 220,
+            // Left: logo + name (aligned to left edge)
+            Align(
+              alignment: Alignment.centerLeft,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -121,61 +120,54 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Flexible(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          bind.mainGetAppNameSync(),
-                          style: GoogleFonts.inter(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                            color: textColor,
-                            letterSpacing: -0.2,
-                            height: 1.1,
-                          ),
-                          overflow: TextOverflow.ellipsis,
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        bind.mainGetAppNameSync(),
+                        style: GoogleFonts.inter(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: textColor,
+                          letterSpacing: -0.2,
+                          height: 1.1,
                         ),
-                        if (bind.isCustomClient())
-                          Text(
-                            'tajdesk.tj',
-                            style: GoogleFonts.inter(
-                              fontSize: 10.5,
-                              letterSpacing: 1.6,
-                              color: MyTheme.accent.withOpacity(0.85),
-                              fontWeight: FontWeight.w500,
-                              height: 1.4,
-                            ),
+                      ),
+                      if (bind.isCustomClient())
+                        Text(
+                          'tajdesk.tj',
+                          style: GoogleFonts.inter(
+                            fontSize: 10.5,
+                            letterSpacing: 1.6,
+                            color: MyTheme.accent.withOpacity(0.85),
+                            fontWeight: FontWeight.w500,
+                            height: 1.4,
                           ),
-                      ],
-                    ),
+                        ),
+                    ],
                   ),
                 ],
               ),
             ),
-            // Center: ID + Pass cards (only on wide screens)
+            // Center: ID + Pass (absolutely centered in whole bar) — wide windows only
             if (!isNarrow)
-              Expanded(
+              Align(
+                alignment: Alignment.center,
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    _buildTajIdCard(context, width: 260),
+                    _buildTajIdCard(context, width: 220),
                     const SizedBox(width: 10),
-                    _buildTajPassCard(context, width: 240),
+                    _buildTajPassCard(context, width: 200),
                   ],
                 ),
-              )
-            else
-              const Spacer(),
-            // Right: settings (fixed width for balance)
-            SizedBox(
-              width: isNarrow ? null : 60,
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: _buildTajSettingsIcon(context),
               ),
+            // Right: settings (aligned to right edge)
+            Align(
+              alignment: Alignment.centerRight,
+              child: _buildTajSettingsIcon(context),
             ),
           ],
         ),
