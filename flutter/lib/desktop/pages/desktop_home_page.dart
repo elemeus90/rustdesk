@@ -106,54 +106,77 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Logo
+            // Left: logo + name (fixed width on wide screens for centering balance)
             SizedBox(
-              width: 44,
-              height: 44,
-              child: Align(
-                alignment: Alignment.center,
-                child: loadLogo(),
-              ),
-            ),
-            const SizedBox(width: 12),
-            // App name + tagline
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  bind.mainGetAppNameSync(),
-                  style: GoogleFonts.inter(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: textColor,
-                    letterSpacing: -0.2,
-                    height: 1.1,
-                  ),
-                ),
-                if (bind.isCustomClient())
-                  Text(
-                    'tajdesk.tj',
-                    style: GoogleFonts.inter(
-                      fontSize: 10.5,
-                      letterSpacing: 1.6,
-                      color: MyTheme.accent.withOpacity(0.85),
-                      fontWeight: FontWeight.w500,
-                      height: 1.4,
+              width: isNarrow ? null : 220,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: loadLogo(),
                     ),
                   ),
-              ],
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          bind.mainGetAppNameSync(),
+                          style: GoogleFonts.inter(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            color: textColor,
+                            letterSpacing: -0.2,
+                            height: 1.1,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (bind.isCustomClient())
+                          Text(
+                            'tajdesk.tj',
+                            style: GoogleFonts.inter(
+                              fontSize: 10.5,
+                              letterSpacing: 1.6,
+                              color: MyTheme.accent.withOpacity(0.85),
+                              fontWeight: FontWeight.w500,
+                              height: 1.4,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const Spacer(),
-            // Inline ID/Pass for wide windows
-            if (!isNarrow) ...[
-              _buildTajIdCard(context, width: 220),
-              const SizedBox(width: 10),
-              _buildTajPassCard(context, width: 200),
-              const SizedBox(width: 12),
-            ],
-            // Settings icon
-            _buildTajSettingsIcon(context),
+            // Center: ID + Pass cards (only on wide screens)
+            if (!isNarrow)
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildTajIdCard(context, width: 260),
+                    const SizedBox(width: 10),
+                    _buildTajPassCard(context, width: 240),
+                  ],
+                ),
+              )
+            else
+              const Spacer(),
+            // Right: settings (fixed width for balance)
+            SizedBox(
+              width: isNarrow ? null : 60,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: _buildTajSettingsIcon(context),
+              ),
+            ),
           ],
         ),
       ),
@@ -233,7 +256,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
                         alignment: Alignment.centerLeft,
-                        child: Text(
+                        child: SelectableText(
                           model.serverId.text.isEmpty
                               ? '...'
                               : model.serverId.text,
@@ -326,7 +349,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
                         alignment: Alignment.centerLeft,
-                        child: Text(
+                        child: SelectableText(
                           model.serverPasswd.text.isEmpty
                               ? '...'
                               : model.serverPasswd.text,
@@ -964,98 +987,114 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       }
     }
 
-    return Stack(
-      children: [
-        Container(
-          margin: EdgeInsets.fromLTRB(
-              0, marginTop, 0, bind.isIncomingOnly() ? marginTop : 0),
-          child: Container(
-              decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [
-                  Color(0xFF3B82F6),
-                  Color(0xFF1D4ED8),
-                ],
-              )),
-              padding: EdgeInsets.all(20),
-              child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: (title.isNotEmpty
-                          ? <Widget>[
-                              Center(
-                                  child: Text(
-                                translate(title),
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15),
-                              ).marginOnly(bottom: 6)),
-                            ]
-                          : <Widget>[]) +
-                      <Widget>[
-                        if (content.isNotEmpty)
-                          Text(
-                            translate(content),
-                            style: TextStyle(
-                                height: 1.5,
-                                color: Colors.white,
-                                fontWeight: FontWeight.normal,
-                                fontSize: 13),
-                          ).marginOnly(bottom: 20)
-                      ] +
-                      (btnText.isNotEmpty
-                          ? <Widget>[
-                              Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    FixedWidthButton(
-                                      width: 150,
-                                      padding: 8,
-                                      isOutline: true,
-                                      text: translate(btnText),
-                                      textColor: Colors.white,
-                                      borderColor: Colors.white,
-                                      textSize: 20,
-                                      radius: 10,
-                                      onTap: onPressed,
-                                    )
-                                  ])
-                            ]
-                          : <Widget>[]) +
-                      (help != null
-                          ? <Widget>[
-                              Center(
-                                  child: InkWell(
-                                      onTap: () async =>
-                                          await launchUrl(Uri.parse(link!)),
-                                      child: Text(
-                                        translate(help),
-                                        style: TextStyle(
-                                            decoration:
-                                                TextDecoration.underline,
-                                            color: Colors.white,
-                                            fontSize: 12),
-                                      )).marginOnly(top: 6)),
-                            ]
-                          : <Widget>[]))),
+    // TajDesk: compact single-line banner
+    return Container(
+      margin: EdgeInsets.fromLTRB(
+          0, marginTop * 0.4, 0, bind.isIncomingOnly() ? marginTop * 0.4 : 0),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
         ),
-        if (closeButton != null && closeButton == true)
-          Positioned(
-            top: 18,
-            right: 0,
-            child: IconButton(
-              icon: Icon(
-                Icons.close,
-                color: Colors.white,
-                size: 20,
-              ),
-              onPressed: closeCard,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.info_outline,
+            color: Colors.white,
+            size: 18,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (title.isNotEmpty)
+                  Text(
+                    translate(title),
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                      height: 1.2,
+                    ),
+                  ),
+                if (content.isNotEmpty)
+                  Text(
+                    translate(content),
+                    style: GoogleFonts.inter(
+                      color: Colors.white.withOpacity(0.95),
+                      fontWeight: FontWeight.w400,
+                      fontSize: 12,
+                      height: 1.35,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                if (help != null)
+                  InkWell(
+                    onTap: () async => await launchUrl(Uri.parse(link!)),
+                    child: Text(
+                      translate(help),
+                      style: GoogleFonts.inter(
+                        decoration: TextDecoration.underline,
+                        color: Colors.white,
+                        fontSize: 11,
+                      ),
+                    ).marginOnly(top: 2),
+                  ),
+              ],
             ),
           ),
-      ],
+          if (btnText.isNotEmpty) ...[
+            const SizedBox(width: 12),
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(6),
+                onTap: onPressed,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 7),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.white, width: 1.3),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    translate(btnText),
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+          if (closeButton != null && closeButton == true) ...[
+            const SizedBox(width: 8),
+            InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: closeCard,
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Icon(
+                  Icons.close,
+                  color: Colors.white.withOpacity(0.85),
+                  size: 16,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 
