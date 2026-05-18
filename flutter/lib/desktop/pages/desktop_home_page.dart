@@ -98,7 +98,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   Widget buildTajTopBar(BuildContext context, {required bool isNarrow}) {
     final textColor = Theme.of(context).textTheme.titleLarge?.color;
     return Container(
-      height: isNarrow ? 64 : 88,
+      height: isNarrow ? 64 : 96,
       color: Theme.of(context).colorScheme.background,
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
       child: ChangeNotifierProvider.value(
@@ -199,7 +199,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       builder: (context, model, _) {
         return Container(
           width: width,
-          height: 64,
+          height: 70,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             color: Theme.of(context).cardColor,
@@ -259,7 +259,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                             fontWeight: FontWeight.w600,
                             color: textColor,
                             letterSpacing: 0.5,
-                            height: 1.1,
+                            height: 1.5,
                           ),
                         ),
                       ),
@@ -282,7 +282,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             model.verificationMethod != kUsePermanentPassword;
         return Container(
           width: width,
-          height: 64,
+          height: 70,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             color: Theme.of(context).cardColor,
@@ -358,7 +358,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                             fontWeight: FontWeight.w600,
                             color: textColor,
                             letterSpacing: 0.5,
-                            height: 1.1,
+                            height: 1.5,
                           ),
                         ),
                       ),
