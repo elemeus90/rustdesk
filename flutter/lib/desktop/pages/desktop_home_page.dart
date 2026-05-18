@@ -180,58 +180,60 @@ class _DesktopHomePageState extends State<DesktopHomePage>
 
   Widget _buildTajIdCard(BuildContext context, {double? width}) {
     final textColor = Theme.of(context).textTheme.titleLarge?.color;
-    final model = gFFI.serverModel;
-    return Container(
-      width: width,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: MyTheme.accent.withOpacity(0.22), width: 1),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            width: 3,
-            height: 32,
-            decoration: BoxDecoration(
-              color: MyTheme.accent,
-              borderRadius: BorderRadius.circular(2),
-            ),
+    return Consumer<ServerModel>(
+      builder: (context, model, _) {
+        return Container(
+          width: width,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(10),
+            border:
+                Border.all(color: MyTheme.accent.withOpacity(0.22), width: 1),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      translate('ID'),
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        letterSpacing: 1.5,
-                        color: textColor?.withOpacity(0.55),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    buildPopupMenu(context),
-                  ],
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 3,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: MyTheme.accent,
+                  borderRadius: BorderRadius.circular(2),
                 ),
-                const SizedBox(height: 2),
-                GestureDetector(
-                  onDoubleTap: () {
-                    Clipboard.setData(
-                        ClipboardData(text: model.serverId.text));
-                    showToast(translate('Copied'));
-                  },
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Obx(() => Text(
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          translate('ID'),
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            letterSpacing: 1.5,
+                            color: textColor?.withOpacity(0.55),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        buildPopupMenu(context),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    GestureDetector(
+                      onDoubleTap: () {
+                        Clipboard.setData(
+                            ClipboardData(text: model.serverId.text));
+                        showToast(translate('Copied'));
+                      },
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
                           model.serverId.text.isEmpty
                               ? '...'
                               : model.serverId.text,
@@ -242,14 +244,16 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                             letterSpacing: 0.5,
                             height: 1.1,
                           ),
-                        )),
-                  ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
