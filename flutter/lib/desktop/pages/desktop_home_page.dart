@@ -98,7 +98,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   Widget buildTajTopBar(BuildContext context, {required bool isNarrow}) {
     final textColor = Theme.of(context).textTheme.titleLarge?.color;
     return Container(
-      height: isNarrow ? 64 : 84,
+      height: isNarrow ? 64 : 88,
       color: Theme.of(context).colorScheme.background,
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
       child: ChangeNotifierProvider.value(
@@ -158,9 +158,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _buildTajIdCard(context, width: 220),
+                    _buildTajIdCard(context, width: 280),
                     const SizedBox(width: 10),
-                    _buildTajPassCard(context, width: 200),
+                    _buildTajPassCard(context, width: 280),
                   ],
                 ),
               ),
@@ -199,7 +199,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       builder: (context, model, _) {
         return Container(
           width: width,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          height: 64,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(10),
@@ -211,7 +212,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             children: [
               Container(
                 width: 3,
-                height: 32,
+                height: 40,
                 decoration: BoxDecoration(
                   color: MyTheme.accent,
                   borderRadius: BorderRadius.circular(2),
@@ -221,6 +222,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Row(
@@ -229,16 +231,16 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                         Text(
                           translate('ID'),
                           style: GoogleFonts.inter(
-                            fontSize: 10,
+                            fontSize: 10.5,
                             letterSpacing: 1.5,
                             color: textColor?.withOpacity(0.55),
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                         buildPopupMenu(context),
                       ],
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 3),
                     GestureDetector(
                       onDoubleTap: () {
                         Clipboard.setData(
@@ -250,7 +252,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                         alignment: Alignment.centerLeft,
                         child: SelectableText(
                           model.serverId.text.isEmpty
-                              ? '...'
+                              ? '—'
                               : model.serverId.text,
                           style: GoogleFonts.jetBrainsMono(
                             fontSize: 18,
@@ -280,7 +282,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             model.verificationMethod != kUsePermanentPassword;
         return Container(
           width: width,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          height: 64,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(10),
@@ -292,7 +295,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             children: [
               Container(
                 width: 3,
-                height: 32,
+                height: 40,
                 decoration: BoxDecoration(
                   color: MyTheme.accent,
                   borderRadius: BorderRadius.circular(2),
@@ -302,18 +305,20 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Expanded(
                           child: Text(
                             translate('One-time Password'),
                             style: GoogleFonts.inter(
-                              fontSize: 10,
+                              fontSize: 10.5,
                               letterSpacing: 1.5,
                               color: textColor?.withOpacity(0.55),
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w700,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -321,20 +326,23 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                         if (showOneTime)
                           GestureDetector(
                             onTap: () => bind.mainUpdateTemporaryPassword(),
-                            child: Icon(
-                              Icons.refresh,
-                              size: 14,
-                              color: textColor?.withOpacity(0.55),
+                            child: Padding(
+                              padding: const EdgeInsets.all(2),
+                              child: Icon(
+                                Icons.refresh,
+                                size: 16,
+                                color: textColor?.withOpacity(0.55),
+                              ),
                             ),
                           ),
                       ],
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 3),
                     GestureDetector(
                       onDoubleTap: () {
                         if (showOneTime) {
-                          Clipboard.setData(ClipboardData(
-                              text: model.serverPasswd.text));
+                          Clipboard.setData(
+                              ClipboardData(text: model.serverPasswd.text));
                           showToast(translate('Copied'));
                         }
                       },
@@ -343,13 +351,13 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                         alignment: Alignment.centerLeft,
                         child: SelectableText(
                           model.serverPasswd.text.isEmpty
-                              ? '...'
+                              ? '—'
                               : model.serverPasswd.text,
                           style: GoogleFonts.jetBrainsMono(
-                            fontSize: 16,
+                            fontSize: 18,
                             fontWeight: FontWeight.w600,
                             color: textColor,
-                            letterSpacing: 1,
+                            letterSpacing: 0.5,
                             height: 1.1,
                           ),
                         ),
