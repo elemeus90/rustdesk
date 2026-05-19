@@ -136,68 +136,69 @@ class _PeerTabPageState extends State<PeerTabPage>
 
   Widget _createSwitchBar(BuildContext context) {
     final model = Provider.of<PeerTabModel>(context);
-    // TajDesk: text-link tabs — use plain horizontal Row with auto-width children.
-    // ReorderableListView in horizontal scroll direction requires each child to
-    // have a fixed width; with auto-sized Text it collapses to a grey placeholder.
-    // We trade drag-to-reorder for proper rendering of text labels.
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const ClampingScrollPhysics(),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: model.visibleEnabledOrderedIndexs.map((t) {
-          final selected = model.currentTab == t;
-          final color = selected
-              ? MyTheme.tabbar(context).selectedTextColor
-              : MyTheme.tabbar(context).unSelectedTextColor
-            ?..withOpacity(0.5);
-          final hover = false.obs;
-          return Obx(() => Tooltip(
-                preferBelow: false,
-                message: model.tabTooltip(t),
-                onTriggered: isMobile ? mobileShowTabVisibilityMenu : null,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(6),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(
-                          width: 2,
-                          color: selected
-                              ? (color ?? Colors.transparent)
-                              : Colors.transparent,
-                        ),
+    // TajDesk: text-link tabs.
+    // CRITICAL: InkWell requires a Material ancestor to render. The original
+    // ReorderableListView provided one implicitly (for drag-and-drop); a plain
+    // Row/SingleChildScrollView does not, so InkWell collapsed into a grey
+    // placeholder. We wrap the scroll view in a transparent Material to fix it.
+    return Material(
+      color: Colors.transparent,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const ClampingScrollPhysics(),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: model.visibleEnabledOrderedIndexs.map((t) {
+            final selected = model.currentTab == t;
+            final selectedColor =
+                MyTheme.tabbar(context).selectedTextColor ??
+                    Theme.of(context).textTheme.titleLarge?.color ??
+                    Colors.white;
+            final unselectedColor =
+                MyTheme.tabbar(context).unSelectedTextColor?.withOpacity(0.6) ??
+                    selectedColor.withOpacity(0.55);
+            return Tooltip(
+              preferBelow: false,
+              message: model.tabTooltip(t),
+              onTriggered: isMobile ? mobileShowTabVisibilityMenu : null,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(6),
+                onTap: isOptionFixed(kOptionPeerTabIndex)
+                    ? null
+                    : () async {
+                        await handleTabSelection(t);
+                        await bind.setLocalFlutterOption(
+                            k: kOptionPeerTabIndex, v: t.toString());
+                      },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        width: 2,
+                        color:
+                            selected ? selectedColor : Colors.transparent,
                       ),
                     ),
-                    child: Text(
-                      model.tabTooltip(t),
-                      style: TextStyle(
-                        color: selected
-                            ? color
-                            : (color?.withOpacity(
-                                hover.value ? 0.85 : 0.55)),
-                        fontSize: 13,
-                        fontWeight: selected
-                            ? FontWeight.w600
-                            : FontWeight.w500,
-                        letterSpacing: 0.1,
-                      ),
+                  ),
+                  child: Text(
+                    model.tabTooltip(t),
+                    style: TextStyle(
+                      color: selected ? selectedColor : unselectedColor,
+                      fontSize: 13,
+                      fontWeight: selected
+                          ? FontWeight.w600
+                          : FontWeight.w500,
+                      letterSpacing: 0.1,
                     ),
-                  ).paddingSymmetric(horizontal: 2),
-                  onTap: isOptionFixed(kOptionPeerTabIndex)
-                      ? null
-                      : () async {
-                          await handleTabSelection(t);
-                          await bind.setLocalFlutterOption(
-                              k: kOptionPeerTabIndex, v: t.toString());
-                        },
-                  onHover: (value) => hover.value = value,
+                  ),
                 ),
-              ));
-        }).toList(),
+              ).paddingSymmetric(horizontal: 2),
+            );
+          }).toList(),
+        ),
       ),
     );
   }
