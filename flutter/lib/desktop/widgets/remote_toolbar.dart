@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -113,10 +114,13 @@ class ToolbarState {
 }
 
 class _ToolbarTheme {
-  static const Color blueColor = MyTheme.button;
-  static const Color hoverBlueColor = MyTheme.accent;
-  static Color inactiveColor = Colors.grey[800]!;
-  static Color hoverInactiveColor = Colors.grey[850]!;
+  // TajDesk: glass toolbar palette — buttons have no solid coloured square
+  // background by default. Active indicators (pin, recording) get a soft
+  // translucent accent tint; inactive icons sit on the blurred glass.
+  static Color blueColor = MyTheme.accent.withOpacity(0.22);
+  static Color hoverBlueColor = MyTheme.accent.withOpacity(0.36);
+  static Color inactiveColor = Colors.transparent;
+  static Color hoverInactiveColor = Colors.white.withOpacity(0.10);
 
   static const Color redColor = Colors.redAccent;
   static const Color hoverRedColor = Colors.red;
@@ -406,33 +410,47 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
     }
     if (!isWeb) toolbarItems.add(_RecordMenu());
     toolbarItems.add(_CloseMenu(id: widget.id, ffi: widget.ffi));
-    final toolbarBorderRadius = BorderRadius.all(Radius.circular(4.0));
+    // TajDesk: floating glass toolbar — softer corners and bigger radius
+    final toolbarBorderRadius = BorderRadius.all(Radius.circular(12.0));
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Material(
-          elevation: _ToolbarTheme.elevation,
-          shadowColor: MyTheme.color(context).shadow,
+        // TajDesk: frosted-glass background for the expanded toolbar.
+        // Wrap the original Material in a BackdropFilter so the desktop image
+        // behind the toolbar is blurred and slightly tinted, instead of the
+        // solid menu-bar colour. ClipRRect is required for the blur to honour
+        // the rounded corners.
+        ClipRRect(
           borderRadius: toolbarBorderRadius,
-          color: Theme.of(context)
-              .menuBarTheme
-              .style
-              ?.backgroundColor
-              ?.resolve(MaterialState.values.toSet()),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Theme(
-              data: themeData(),
-              child: _ToolbarTheme.borderWrapper(
-                  context,
-                  Row(
-                    children: [
-                      SizedBox(width: _ToolbarTheme.buttonHMargin * 2),
-                      ...toolbarItems,
-                      SizedBox(width: _ToolbarTheme.buttonHMargin * 2)
-                    ],
+          child: BackdropFilter(
+            filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Material(
+              elevation: _ToolbarTheme.elevation,
+              shadowColor: Colors.black.withOpacity(0.4),
+              borderRadius: toolbarBorderRadius,
+              color: Colors.black.withOpacity(0.32),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Theme(
+                  data: themeData(),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.08),
+                        width: 1,
+                      ),
+                      borderRadius: toolbarBorderRadius,
+                    ),
+                    child: Row(
+                      children: [
+                        SizedBox(width: _ToolbarTheme.buttonHMargin * 2),
+                        ...toolbarItems,
+                        SizedBox(width: _ToolbarTheme.buttonHMargin * 2)
+                      ],
+                    ),
                   ),
-                  toolbarBorderRadius),
+                ),
+              ),
             ),
           ),
         ),
@@ -2621,15 +2639,16 @@ class _DraggableShowHideState extends State<_DraggableShowHide> {
     const double iconSize = 20;
 
     buttonWrapper(VoidCallback? onPressed, Widget child,
-        {Color hoverColor = _ToolbarTheme.blueColor}) {
+        {Color? hoverColor}) {
       final bgColor = buttonStyle.backgroundColor?.resolve({});
+      final effectiveHover = hoverColor ?? _ToolbarTheme.blueColor;
       return TextButton(
         onPressed: onPressed,
         child: child,
         style: buttonStyle.copyWith(
           backgroundColor: MaterialStateProperty.resolveWith((states) {
             if (states.contains(MaterialState.hovered)) {
-              return (bgColor ?? hoverColor).withOpacity(0.15);
+              return (bgColor ?? effectiveHover).withOpacity(0.15);
             }
             return bgColor;
           }),
@@ -2706,22 +2725,28 @@ class _DraggableShowHideState extends State<_DraggableShowHide> {
     );
     return TextButtonTheme(
       data: TextButtonThemeData(style: buttonStyle),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context)
-              .menuBarTheme
-              .style
-              ?.backgroundColor
-              ?.resolve(MaterialState.values.toSet()),
-          border: Border.all(
-            color: _ToolbarTheme.borderColor(context),
-            width: 1,
+      // TajDesk: frosted-glass floating chip instead of solid container.
+      child: ClipRRect(
+        borderRadius: widget.borderRadius ?? BorderRadius.circular(12),
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.35),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.08),
+                width: 1,
+              ),
+              borderRadius:
+                  widget.borderRadius ?? BorderRadius.circular(12),
+            ),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: SizedBox(
+              height: 24,
+              child: child,
+            ),
           ),
-          borderRadius: widget.borderRadius,
-        ),
-        child: SizedBox(
-          height: 20,
-          child: child,
         ),
       ),
     );
