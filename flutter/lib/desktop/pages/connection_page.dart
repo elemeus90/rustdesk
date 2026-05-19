@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common/widgets/connection_page_title.dart';
 import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/desktop/widgets/popup_menu.dart';
+import 'package:flutter_hbb/desktop/pages/desktop_home_page.dart'
+    show kTajBrandDomain;
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher_string.dart';
@@ -347,7 +349,7 @@ class _ConnectionPageState extends State<ConnectionPage>
             bottom: 0,
             child: Center(
               child: Text(
-                '$appName$ver · tajdesk.tj',
+                '$appName$ver · $kTajBrandDomain',
                 style: TextStyle(
                   fontSize: 11,
                   letterSpacing: 0.4,

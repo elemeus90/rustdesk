@@ -1084,18 +1084,21 @@ void showThemeSettings(OverlayDialogManager dialogManager) async {
 
 void showAbout(OverlayDialogManager dialogManager) {
   dialogManager.show((setState, close, context) {
+    // TajDesk: dynamic brand
+    final appName = bind.mainGetAppNameSync();
+    const brandDomain = 'tajdesk.tj';
     return CustomAlertDialog(
-      title: Text(translate('About RustDesk')),
+      title: Text('${translate('About')} $appName'),
       content: Wrap(direction: Axis.vertical, spacing: 12, children: [
         Text('Version: $version'),
         InkWell(
             onTap: () async {
-              const url = 'https://rustdesk.com/';
+              const url = 'https://$brandDomain/';
               await launchUrl(Uri.parse(url));
             },
             child: Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text('rustdesk.com',
+              child: Text(brandDomain,
                   style: TextStyle(
                     decoration: TextDecoration.underline,
                   )),
