@@ -101,7 +101,7 @@ class _PeerCardState extends State<_PeerCard>
         ),
       ),
     );
-    return MouseRegion(
+    final region = MouseRegion(
       onEnter: (evt) {
         deco.value = BoxDecoration(
           border: Border.all(
@@ -125,6 +125,14 @@ class _PeerCardState extends State<_PeerCard>
               ? _buildPeerCard(context, peer, deco)
               : _buildPeerTile(context, peer, deco))),
     );
+    // TajDesk: in grid mode, clamp the outer hit area to the visible card size
+    // (280×80) so that:
+    //   - the hover border doesn't grow outside the card
+    //   - the grid doesn't reserve more space per cell than the card actually
+    //     occupies, removing the big vertical gaps between rows.
+    return Obx(() => peerCardUiType.value == PeerUiType.grid
+        ? SizedBox(width: 280, height: 80, child: region)
+        : region);
   }
 
   bool _showNote(Peer peer) {
@@ -295,24 +303,23 @@ class _PeerCardState extends State<_PeerCard>
     final titleColor = Theme.of(context).textTheme.titleLarge?.color;
     final mutedColor = titleColor?.withOpacity(0.55);
 
-    final cardChild = Card(
-      color: Colors.transparent,
-      elevation: 0,
-      margin: EdgeInsets.zero,
-      child: Obx(
-        () => Container(
-          width: 280,
-          height: 80,
-          foregroundDecoration: deco.value,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.background,
-            borderRadius: BorderRadius.circular(_cardRadius - _borderWidth),
-            border: Border.all(
-              color: MyTheme.accent.withOpacity(0.10),
-              width: 1,
-            ),
+    // TajDesk: tightly sized card (280×80). Card wrapper removed — it added
+    // implicit material chrome that confused the parent grid delegate and
+    // inflated the hit-test area. Now the visible bounds == the hit area.
+    final cardChild = Obx(
+      () => Container(
+        width: 280,
+        height: 80,
+        foregroundDecoration: deco.value,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.background,
+          borderRadius: BorderRadius.circular(_cardRadius - _borderWidth),
+          border: Border.all(
+            color: MyTheme.accent.withOpacity(0.10),
+            width: 1,
           ),
-          padding: const EdgeInsets.all(10),
+        ),
+        padding: const EdgeInsets.all(10),
           child: Row(
             children: [
               // Left: platform icon in a tinted square
@@ -407,7 +414,6 @@ class _PeerCardState extends State<_PeerCard>
             ],
           ),
         ),
-      ),
     );
 
     final colors = _frontN(peer.tags, 25)
