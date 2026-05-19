@@ -157,6 +157,8 @@ void runMainApp(bool startService) async {
   WindowOptions windowOptions = getHiddenTitleBarWindowOptions(
       isMainWindow: true, alwaysOnTop: alwaysOnTop);
   windowManager.waitUntilReadyToShow(windowOptions, () async {
+    // TajDesk: lock the main window from being shrunk below a usable size
+    await windowManager.setMinimumSize(const Size(680, 720));
     // Restore the location of the main window before window hide or show.
     await restoreWindowPosition(WindowType.Main);
     // Check the startup argument, if we successfully handle the argument, we keep the main window hidden.

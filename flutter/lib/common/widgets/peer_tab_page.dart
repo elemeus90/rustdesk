@@ -110,7 +110,7 @@ class _PeerTabPageState extends State<PeerTabPage>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Obx(() => SizedBox(
-              height: 32,
+              height: 40,
               child: Container(
                 padding: stateGlobal.isPortrait.isTrue
                     ? EdgeInsets.symmetric(horizontal: 2)
@@ -149,13 +149,7 @@ class _PeerTabPageState extends State<PeerTabPage>
               : MyTheme.tabbar(context).unSelectedTextColor
             ?..withOpacity(0.5);
           final hover = false.obs;
-          final deco = BoxDecoration(
-              color: Theme.of(context).colorScheme.background,
-              borderRadius: BorderRadius.circular(6));
-          final decoBorder = BoxDecoration(
-              border: Border(
-            bottom: BorderSide(width: 2, color: color!),
-          ));
+          // TajDesk: text-link tabs instead of icons
           counter += 1;
           return ReorderableDragStartListener(
               key: ValueKey(t),
@@ -165,13 +159,35 @@ class _PeerTabPageState extends State<PeerTabPage>
                     message: model.tabTooltip(t),
                     onTriggered: isMobile ? mobileShowTabVisibilityMenu : null,
                     child: InkWell(
+                      borderRadius: BorderRadius.circular(6),
                       child: Container(
-                        decoration: (hover.value
-                            ? (selected ? decoBorder : deco)
-                            : (selected ? decoBorder : null)),
-                        child: Icon(model.tabIcon(t), color: color)
-                            .paddingSymmetric(horizontal: 4),
-                      ).paddingSymmetric(horizontal: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(
+                              width: 2,
+                              color: selected
+                                  ? (color ?? Colors.transparent)
+                                  : Colors.transparent,
+                            ),
+                          ),
+                        ),
+                        child: Text(
+                          model.tabTooltip(t),
+                          style: TextStyle(
+                            color: selected
+                                ? color
+                                : (color?.withOpacity(
+                                    hover.value ? 0.85 : 0.55)),
+                            fontSize: 13,
+                            fontWeight: selected
+                                ? FontWeight.w600
+                                : FontWeight.w500,
+                            letterSpacing: 0.1,
+                          ),
+                        ),
+                      ).paddingSymmetric(horizontal: 2),
                       onTap: isOptionFixed(kOptionPeerTabIndex)
                           ? null
                           : () async {

@@ -321,8 +321,44 @@ class _ConnectionPageState extends State<ConnectionPage>
           ],
         ).paddingOnly(left: 12.0)),
         if (!isOutgoingOnly) const Divider(height: 1),
-        if (!isOutgoingOnly) OnlineStatusWidget()
+        if (!isOutgoingOnly) _buildTajStatusBar(context),
       ],
+    );
+  }
+
+  // TajDesk: status bar = original online widget + branded right side
+  Widget _buildTajStatusBar(BuildContext context) {
+    final textColor = Theme.of(context).textTheme.titleLarge?.color;
+    final appName = bind.mainGetAppNameSync();
+    final ver = version.isEmpty ? '' : ' v$version';
+    return Container(
+      color: Theme.of(context).colorScheme.background,
+      child: Stack(
+        children: [
+          // Left: original status widget (● Ready / connecting / etc.)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OnlineStatusWidget(),
+          ),
+          // Right: brand caption
+          Positioned(
+            right: 14,
+            top: 0,
+            bottom: 0,
+            child: Center(
+              child: Text(
+                '$appName$ver · tajdesk.tj',
+                style: TextStyle(
+                  fontSize: 11,
+                  letterSpacing: 0.4,
+                  color: (textColor ?? Colors.grey).withOpacity(0.45),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

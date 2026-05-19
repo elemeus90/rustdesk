@@ -225,41 +225,48 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          translate('ID'),
-                          style: GoogleFonts.inter(
-                            fontSize: 10.5,
-                            letterSpacing: 1.5,
-                            color: textColor?.withOpacity(0.55),
-                            fontWeight: FontWeight.w700,
+                    // TajDesk: fixed-height label row for consistent baseline with Pass card
+                    SizedBox(
+                      height: 18,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            translate('ID'),
+                            style: GoogleFonts.inter(
+                              fontSize: 10.5,
+                              letterSpacing: 1.5,
+                              color: textColor?.withOpacity(0.55),
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                        ),
-                        buildPopupMenu(context),
-                      ],
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 3),
-                    GestureDetector(
-                      onDoubleTap: () {
-                        Clipboard.setData(
-                            ClipboardData(text: model.serverId.text));
-                        showToast(translate('Copied'));
-                      },
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: SelectableText(
-                          model.serverId.text.isEmpty
-                              ? '—'
-                              : model.serverId.text,
-                          style: GoogleFonts.jetBrainsMono(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: textColor,
-                            letterSpacing: 0.5,
-                            height: 1.5,
+                    const SizedBox(height: 4),
+                    SizedBox(
+                      height: 28,
+                      child: GestureDetector(
+                        onDoubleTap: () {
+                          Clipboard.setData(
+                              ClipboardData(text: model.serverId.text));
+                          showToast(translate('Copied'));
+                        },
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: SelectableText(
+                            model.serverId.text.isEmpty
+                                ? '—'
+                                : model.serverId.text,
+                            style: GoogleFonts.jetBrainsMono(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: textColor,
+                              letterSpacing: 0.5,
+                              height: 1.0,
+                            ),
                           ),
                         ),
                       ),
@@ -308,57 +315,62 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            translate('One-time Password'),
-                            style: GoogleFonts.inter(
-                              fontSize: 10.5,
-                              letterSpacing: 1.5,
-                              color: textColor?.withOpacity(0.55),
-                              fontWeight: FontWeight.w700,
+                    // TajDesk: fixed-height label row matches ID card for baseline alignment
+                    SizedBox(
+                      height: 18,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              translate('One-time Password'),
+                              style: GoogleFonts.inter(
+                                fontSize: 10.5,
+                                letterSpacing: 1.5,
+                                color: textColor?.withOpacity(0.55),
+                                fontWeight: FontWeight.w700,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                        if (showOneTime)
-                          GestureDetector(
-                            onTap: () => bind.mainUpdateTemporaryPassword(),
-                            child: Padding(
-                              padding: const EdgeInsets.all(2),
+                          if (showOneTime)
+                            GestureDetector(
+                              onTap: () => bind.mainUpdateTemporaryPassword(),
                               child: Icon(
                                 Icons.refresh,
-                                size: 16,
+                                size: 14,
                                 color: textColor?.withOpacity(0.55),
                               ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 3),
-                    GestureDetector(
-                      onDoubleTap: () {
-                        if (showOneTime) {
-                          Clipboard.setData(
-                              ClipboardData(text: model.serverPasswd.text));
-                          showToast(translate('Copied'));
-                        }
-                      },
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: SelectableText(
-                          model.serverPasswd.text.isEmpty
-                              ? '—'
-                              : model.serverPasswd.text,
-                          style: GoogleFonts.jetBrainsMono(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: textColor,
-                            letterSpacing: 0.5,
-                            height: 1.5,
+                    const SizedBox(height: 4),
+                    SizedBox(
+                      height: 28,
+                      child: GestureDetector(
+                        onDoubleTap: () {
+                          if (showOneTime) {
+                            Clipboard.setData(
+                                ClipboardData(text: model.serverPasswd.text));
+                            showToast(translate('Copied'));
+                          }
+                        },
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: SelectableText(
+                            model.serverPasswd.text.isEmpty
+                                ? '—'
+                                : model.serverPasswd.text,
+                            style: GoogleFonts.jetBrainsMono(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: textColor,
+                              letterSpacing: 0.5,
+                              height: 1.0,
+                            ),
                           ),
                         ),
                       ),
