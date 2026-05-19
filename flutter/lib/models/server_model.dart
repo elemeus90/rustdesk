@@ -95,7 +95,8 @@ class ServerModel with ChangeNotifier {
   String get temporaryPasswordLength {
     final lengthIndex = ["6", "8", "10"].indexOf(_temporaryPasswordLength);
     if (lengthIndex < 0) {
-      return "6";
+      // TajDesk: default to 8 chars instead of 6
+      return "8";
     }
     return _temporaryPasswordLength;
   }
@@ -232,8 +233,24 @@ class ServerModel with ChangeNotifier {
     final temporaryPassword = await bind.mainGetTemporaryPassword();
     final verificationMethod =
         await bind.mainGetOption(key: kOptionVerificationMethod);
-    final temporaryPasswordLength =
+    var temporaryPasswordLength =
         await bind.mainGetOption(key: "temporary-password-length");
+    // TajDesk: force-default the one-time password length to 8 once per install.
+    // RustDesk ships with 6; we override on first read and remember it so the
+    // user can still change it manually afterwards without us overwriting again.
+    final tajPwLenApplied =
+        await bind.mainGetOption(key: "tajdesk-pw-length-applied");
+    if (tajPwLenApplied != "Y") {
+      if (temporaryPasswordLength.isEmpty || temporaryPasswordLength == "6") {
+        await bind.mainSetOption(
+            key: "temporary-password-length", value: "8");
+        temporaryPasswordLength = "8";
+        // Regenerate the temporary password right away so the UI shows an 8-char one
+        bind.mainUpdateTemporaryPassword();
+      }
+      await bind.mainSetOption(
+          key: "tajdesk-pw-length-applied", value: "Y");
+    }
     final approveMode = await bind.mainGetOption(key: kOptionApproveMode);
     final numericOneTimePassword =
         await mainGetBoolOption(kOptionAllowNumericOneTimePassword);
