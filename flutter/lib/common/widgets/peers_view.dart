@@ -187,22 +187,55 @@ class _PeersViewState extends State<_PeersView>
       child: Consumer<Peers>(builder: (context, peers, child) {
         if (peers.peers.isEmpty) {
           gFFI.peerTabModel.setCurrentTabCachedPeers([]);
+          // TajDesk: per-tab meaningful icon instead of the same sad smiley
+          // for every empty state.
+          final iconColor = Theme.of(context).tabBarTheme.labelColor;
+          IconData emptyIcon;
+          switch (widget.peers.loadEvent) {
+            case LoadEvent.recent:
+              emptyIcon = Icons.history_rounded;
+              break;
+            case LoadEvent.favorite:
+              emptyIcon = Icons.bookmark_border_rounded;
+              break;
+            case LoadEvent.lan:
+              emptyIcon = Icons.wifi_find_rounded;
+              break;
+            case LoadEvent.addressBook:
+              emptyIcon = Icons.contacts_outlined;
+              break;
+            case LoadEvent.group:
+              emptyIcon = Icons.groups_outlined;
+              break;
+            default:
+              emptyIcon = Icons.inbox_outlined;
+          }
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.sentiment_very_dissatisfied_rounded,
-                  color: Theme.of(context).tabBarTheme.labelColor,
-                  size: 40,
-                ).paddingOnly(bottom: 10),
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: (iconColor ?? Colors.grey).withOpacity(0.08),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    emptyIcon,
+                    color: iconColor?.withOpacity(0.7),
+                    size: 30,
+                  ),
+                ).paddingOnly(bottom: 14),
                 Text(
                   translate(
                     _emptyMessages[widget.peers.loadEvent] ?? 'Empty',
                   ),
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Theme.of(context).tabBarTheme.labelColor,
+                    color: iconColor?.withOpacity(0.65),
+                    fontSize: 13,
+                    height: 1.5,
                   ),
                 ),
               ],

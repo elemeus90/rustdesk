@@ -217,6 +217,9 @@ class _ConnectionPageState extends State<ConnectionPage>
   Iterable<Peer> _autocompleteOpts = [];
 
   final _menuOpen = false.obs;
+  // TajDesk: shows a spinner inside the Connect button while we wait for the
+  // new remote window to open (~1.5s on average).
+  final _isConnecting = false.obs;
 
   @override
   void initState() {
@@ -371,6 +374,12 @@ class _ConnectionPageState extends State<ConnectionPage>
       bool isViewCamera = false,
       bool isTerminal = false}) {
     var id = _idController.id;
+    if (id.isEmpty) return;
+    // TajDesk: show spinner briefly while the new remote window opens
+    _isConnecting.value = true;
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) _isConnecting.value = false;
+    });
     connect(context, id,
         isFileTransfer: isFileTransfer,
         isViewCamera: isViewCamera,
@@ -554,15 +563,27 @@ class _ConnectionPageState extends State<ConnectionPage>
             Padding(
               padding: const EdgeInsets.only(top: 13.0),
               child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                SizedBox(
-                  height: 28.0,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      onConnect();
-                    },
-                    child: Text(translate("Connect")),
-                  ),
-                ),
+                Obx(() => SizedBox(
+                      height: 28.0,
+                      child: ElevatedButton(
+                        onPressed: _isConnecting.value
+                            ? null
+                            : () {
+                                onConnect();
+                              },
+                        child: _isConnecting.value
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white),
+                                ),
+                              )
+                            : Text(translate("Connect")),
+                      ),
+                    )),
                 const SizedBox(width: 8),
                 Container(
                   height: 28.0,

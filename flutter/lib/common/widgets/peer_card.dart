@@ -280,105 +280,131 @@ class _PeerCardState extends State<_PeerCard>
 
   Widget _buildPeerCard(
       BuildContext context, Peer peer, Rx<BoxDecoration?> deco) {
+    // TajDesk: redesigned compact card.
+    // Old design was a tall square (~150x150) with a giant 60px platform icon
+    // on a coloured background — the most recognizable RustDesk visual.
+    // New design: horizontal tile-style card ~280x80 with a small platform
+    // icon in a tinted square on the left, host name prominent at the top,
+    // status + ID smaller below, action menu on the right.
     hideUsernameOnCard ??=
         bind.mainGetBuildinOption(key: kHideUsernameOnCard) == 'Y';
     final name = hideUsernameOnCard == true
         ? peer.hostname
         : '${peer.username}${peer.username.isNotEmpty && peer.hostname.isNotEmpty ? '@' : ''}${peer.hostname}';
-    final child = Card(
+    final displayId = peer.alias.isEmpty ? formatID(peer.id) : peer.alias;
+    final titleColor = Theme.of(context).textTheme.titleLarge?.color;
+    final mutedColor = titleColor?.withOpacity(0.55);
+
+    final cardChild = Card(
       color: Colors.transparent,
       elevation: 0,
       margin: EdgeInsets.zero,
-      // to-do: memory leak here, more investigation needed.
-      // Continious rebuilds of `Obx()` will cause memory leak here.
-      // The simple demo does not have this issue.
       child: Obx(
         () => Container(
+          width: 280,
+          height: 80,
           foregroundDecoration: deco.value,
-          child: ClipRRect(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.background,
             borderRadius: BorderRadius.circular(_cardRadius - _borderWidth),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Container(
-                    color: str2color('${peer.id}${peer.platform}', 0x7f),
-                    child: Row(
+            border: Border.all(
+              color: MyTheme.accent.withOpacity(0.10),
+              width: 1,
+            ),
+          ),
+          padding: const EdgeInsets.all(10),
+          child: Row(
+            children: [
+              // Left: platform icon in a tinted square
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: str2color('${peer.id}${peer.platform}', 0x66),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                alignment: Alignment.center,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    getPlatformImage(peer.platform, size: 32),
+                    if (_shouldBuildPasswordIcon(peer))
+                      const Positioned(
+                        top: 2,
+                        left: 2,
+                        child: Icon(Icons.key,
+                            size: 10, color: Colors.white),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Middle: host name + status + id
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Tooltip(
+                      message: name,
+                      waitDuration: const Duration(seconds: 1),
+                      child: Text(
+                        name.isEmpty ? displayId : name,
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          color: titleColor,
+                          height: 1.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
                       children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(6),
-                                child:
-                                    getPlatformImage(peer.platform, size: 60),
-                              ),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Tooltip(
-                                      message: name,
-                                      waitDuration: const Duration(seconds: 1),
-                                      child: Text(
-                                        name,
-                                        style: const TextStyle(
-                                            color: Colors.white70,
-                                            fontSize: 12),
-                                        textAlign: TextAlign.center,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              if (_showNote(peer))
-                                Row(
-                                  children: [
-                                    Expanded(
-                                        child: Tooltip(
-                                      message: peer.note,
-                                      waitDuration: const Duration(seconds: 1),
-                                      child: Text(
-                                        peer.note,
-                                        style: const TextStyle(
-                                            color: Colors.white38,
-                                            fontSize: 10),
-                                        textAlign: TextAlign.center,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ))
-                                  ],
-                                ),
-                            ],
-                          ).paddingOnly(top: 4.0, left: 4.0, right: 4.0),
+                        getOnline(7, peer.online),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            displayId,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: mutedColor,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures()
+                              ],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ),
-                  ),
+                    if (_showNote(peer))
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Tooltip(
+                          message: peer.note,
+                          waitDuration: const Duration(seconds: 1),
+                          child: Text(
+                            peer.note,
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              color: mutedColor?.withOpacity(0.7),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-                Container(
-                  color: Theme.of(context).colorScheme.background,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                          child: Row(children: [
-                        getOnline(8, peer.online),
-                        Expanded(
-                            child: Text(
-                          peer.alias.isEmpty ? formatID(peer.id) : peer.alias,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleSmall,
-                        )),
-                      ]).paddingSymmetric(vertical: 8)),
-                      checkBoxOrActionMoreLandscape(peer, isTile: false),
-                    ],
-                  ).paddingSymmetric(horizontal: 12.0),
-                )
-              ],
-            ),
+              ),
+              // Right: action menu or selection
+              checkBoxOrActionMoreLandscape(peer, isTile: false),
+            ],
           ),
         ),
       ),
@@ -392,17 +418,11 @@ class _PeerCardState extends State<_PeerCard>
           ? '${translate('Tags')}: ${peer.tags.join(', ')}'
           : '',
       child: Stack(children: [
-        child,
-        if (_shouldBuildPasswordIcon(peer))
-          Positioned(
-            top: 4,
-            left: 12,
-            child: Icon(Icons.key, size: 12, color: Colors.white),
-          ),
+        cardChild,
         if (colors.isNotEmpty)
           Positioned(
-            top: 4,
-            right: 12,
+            top: 6,
+            right: 10,
             child: CustomPaint(
               painter: TagPainter(radius: 4, colors: colors),
             ),
