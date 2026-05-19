@@ -306,14 +306,32 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
   }
 
   Widget _header(BuildContext context) {
-    final settingsText = Text(
-      translate('Settings'),
-      textAlign: TextAlign.left,
-      style: const TextStyle(
-        color: _accentColor,
-        fontSize: _kTitleFontSize,
-        fontWeight: FontWeight.w400,
-      ),
+    // TajDesk: redesigned header — bigger, bolder, neutral text color,
+    // accent only used as a tiny side-bar decoration.
+    final titleColor = Theme.of(context).textTheme.titleLarge?.color;
+    final settingsText = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 3,
+          height: 22,
+          margin: const EdgeInsets.only(right: 10),
+          decoration: BoxDecoration(
+            color: _accentColor,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        Text(
+          translate('Settings'),
+          textAlign: TextAlign.left,
+          style: TextStyle(
+            color: titleColor,
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.2,
+          ),
+        ),
+      ],
     );
     return Row(
       children: [
@@ -333,12 +351,15 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
               alignment: Alignment.center,
               child: settingsText,
             ),
-          ).marginOnly(left: 20),
+          ).marginOnly(left: 18),
         if (!isWeb)
           SizedBox(
             height: 62,
-            child: settingsText,
-          ).marginOnly(left: 20, top: 10),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: settingsText,
+            ),
+          ).marginOnly(left: 18, top: 12),
         const Spacer(),
       ],
     );
@@ -355,39 +376,58 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
   Widget _listItem({required _TabInfo tab}) {
     return Obx(() {
       bool selected = tab.key == selectedTab.value;
-      return SizedBox(
-        width: _kTabWidth,
-        height: _kTabHeight,
-        child: InkWell(
-          onTap: () {
-            if (selectedTab.value != tab.key) {
-              int index = DesktopSettingPage.tabKeys.indexOf(tab.key);
-              if (index == -1) {
-                return;
+      // TajDesk: redesigned sidebar item — soft tinted pill for active state,
+      // hover effect for inactive, no left-bar marker. Linear/Notion style.
+      final activeBg = _accentColor.withOpacity(0.13);
+      final activeFg = _accentColor;
+      final inactiveFg =
+          Theme.of(Get.context!).textTheme.titleLarge?.color?.withOpacity(0.72);
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: () {
+              if (selectedTab.value != tab.key) {
+                int index = DesktopSettingPage.tabKeys.indexOf(tab.key);
+                if (index == -1) {
+                  return;
+                }
+                controller.jumpToPage(index);
               }
-              controller.jumpToPage(index);
-            }
-            selectedTab.value = tab.key;
-          },
-          child: Row(children: [
-            Container(
-              width: 4,
-              height: _kTabHeight * 0.7,
-              color: selected ? _accentColor : null,
+              selectedTab.value = tab.key;
+            },
+            child: Container(
+              height: _kTabHeight - 4,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: selected ? activeBg : Colors.transparent,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    selected ? tab.selected : tab.unselected,
+                    color: selected ? activeFg : inactiveFg,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      translate(tab.label),
+                      style: TextStyle(
+                        color: selected ? activeFg : inactiveFg,
+                        fontWeight:
+                            selected ? FontWeight.w600 : FontWeight.w500,
+                        fontSize: _kContentFontSize - 0.5,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            Icon(
-              selected ? tab.selected : tab.unselected,
-              color: selected ? _accentColor : null,
-              size: 20,
-            ).marginOnly(left: 13, right: 10),
-            Text(
-              translate(tab.label),
-              style: TextStyle(
-                  color: selected ? _accentColor : null,
-                  fontWeight: FontWeight.w400,
-                  fontSize: _kContentFontSize),
-            ),
-          ]),
+          ),
         ),
       );
     });
@@ -2477,36 +2517,60 @@ Widget _Card(
     {required String title,
     required List<Widget> children,
     List<Widget>? title_suffix}) {
-  return Row(
-    children: [
-      Flexible(
-        child: SizedBox(
-          width: _kCardFixedWidth,
-          child: Card(
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                        child: Text(
-                      translate(title),
-                      textAlign: TextAlign.start,
-                      style: const TextStyle(
-                        fontSize: _kTitleFontSize,
-                      ),
-                    )),
-                    ...?title_suffix
-                  ],
-                ).marginOnly(left: _kContentHMargin, top: 10, bottom: 10),
-                ...children
-                    .map((e) => e.marginOnly(top: 4, right: _kContentHMargin)),
-              ],
-            ).marginOnly(bottom: 10),
-          ).marginOnly(left: _kCardLeftMargin, top: 15),
+  // TajDesk: redesigned section — small uppercase header, soft border,
+  // no Material card chrome. Reads like a modern SaaS settings page.
+  return Builder(builder: (context) {
+    final borderColor = MyTheme.accent.withOpacity(0.12);
+    final headerColor =
+        Theme.of(context).textTheme.titleLarge?.color?.withOpacity(0.55);
+    return Row(
+      children: [
+        Flexible(
+          child: SizedBox(
+            width: _kCardFixedWidth,
+            child: Container(
+              margin: const EdgeInsets.only(left: _kCardLeftMargin, top: 15),
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: borderColor, width: 1),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                        _kContentHMargin, 12, _kContentHMargin, 6),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            translate(title).toUpperCase(),
+                            textAlign: TextAlign.start,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.2,
+                              color: headerColor,
+                            ),
+                          ),
+                        ),
+                        ...?title_suffix
+                      ],
+                    ),
+                  ),
+                  ...children
+                      .map((e) => e.marginOnly(top: 4, right: _kContentHMargin)),
+                  const SizedBox(height: 6),
+                ],
+              ),
+            ),
+          ),
         ),
-      ),
-    ],
-  );
+      ],
+    );
+  });
 }
 
 // ignore: non_constant_identifier_names
