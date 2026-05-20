@@ -315,10 +315,23 @@ class _PeersViewState extends State<_PeersView>
                               bottom: space / 2);
                         },
                       )
-                    : DynamicGridView.builder(
-                        gridDelegate: SliverGridDelegateWithWrapping(
-                            mainAxisSpacing: space / 2,
-                            crossAxisSpacing: space),
+                    : GridView.builder(
+                        // TajDesk stage 13: switched from DynamicGridView +
+                        // SliverGridDelegateWithWrapping to a plain GridView
+                        // with SliverGridDelegateWithMaxCrossAxisExtent. The
+                        // wrapping delegate from dynamic_layouts didn't honour
+                        // our tight 280×80 tile and was reserving roughly
+                        // tile-height worth of extra room per row, producing
+                        // big empty vertical gaps between rows of cards. With
+                        // an explicit mainAxisExtent: 80 the grid now packs
+                        // rows exactly as tall as the cards themselves.
+                        gridDelegate:
+                            const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 280,
+                          mainAxisExtent: 80,
+                          mainAxisSpacing: 8,
+                          crossAxisSpacing: 12,
+                        ),
                         itemCount: peers.length,
                         itemBuilder: (BuildContext context, int index) {
                           return buildOnePeer(peers[index], false);

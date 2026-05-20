@@ -583,12 +583,18 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
       ),
       menuBarTheme: MenuBarThemeData(
           style: MenuStyle(
+        // TajDesk stage 13: force MenuBar background to be transparent so
+        // every toolbar button sits directly on the frosted-glass panel,
+        // instead of carrying a dark grey card behind it (inherited from
+        // the global dark theme). Without this override the icons looked
+        // like they were stuck on black tiles, fighting the glass effect.
+        backgroundColor: MaterialStatePropertyAll(Colors.transparent),
+        surfaceTintColor: MaterialStatePropertyAll(Colors.transparent),
+        shadowColor: MaterialStatePropertyAll(Colors.transparent),
         padding: MaterialStatePropertyAll(EdgeInsets.zero),
         elevation: MaterialStatePropertyAll(0),
         shape: MaterialStatePropertyAll(BeveledRectangleBorder()),
-      ).copyWith(
-              backgroundColor:
-                  Theme.of(context).menuBarTheme.style?.backgroundColor)),
+      )),
     );
   }
 }
