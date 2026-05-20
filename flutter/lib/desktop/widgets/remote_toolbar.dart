@@ -148,6 +148,16 @@ class _ToolbarTheme {
   static Color? dividerColor(BuildContext context) =>
       MyTheme.color(context).divider;
 
+  // TajDesk stage 14: helper for rendering a Material icon in the toolbar
+  // in place of the original RustDesk SVG assets. Centered inside the 32×32
+  // button bounding box at 22px so the visual weight matches the old SVGs
+  // (which had built-in padding inside their viewBox). White by default —
+  // tinting comes from the surrounding button background, not the icon
+  // itself, exactly like the SVGs did with their srcIn colour filter.
+  static Widget materialIcon(IconData data, {double size = 22}) => Center(
+        child: Icon(data, color: Colors.white, size: size),
+      );
+
   // TajDesk stage 12: vertical separator between logical groups of toolbar
   // buttons. Thin hairline tinted to match the glass surface — readable on
   // both light and dark wallpapers without screaming for attention.
@@ -607,7 +617,11 @@ class _PinMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return Obx(
       () => _IconMenuButton(
-        assetName: state.pin ? "assets/pinned.svg" : "assets/unpinned.svg",
+        // TajDesk stage 14: Material push_pin (filled when pinned, outlined
+        // when unpinned). Two states are visually distinct without colour.
+        icon: _ToolbarTheme.materialIcon(
+          state.pin ? Icons.push_pin : Icons.push_pin_outlined,
+        ),
         tooltip: state.pin ? 'Unpin Toolbar' : 'Pin Toolbar',
         onPressed: state.switchPin,
         color:
@@ -628,7 +642,8 @@ class _MobileActionMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!ffi.ffiModel.isPeerAndroid) return Offstage();
     return Obx(() => _IconMenuButton(
-          assetName: 'assets/actions_mobile.svg',
+          // TajDesk stage 14: touch gesture icon for mobile actions overlay.
+          icon: _ToolbarTheme.materialIcon(Icons.touch_app_outlined),
           tooltip: 'Mobile Actions',
           onPressed: () => ffi.dialogManager.setMobileActionsOverlayVisible(
               !ffi.dialogManager.mobileActionsOverlayVisible.value),
@@ -761,10 +776,12 @@ class _MonitorMenu extends StatelessWidget {
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        SvgPicture.asset(
-                          "assets/screen.svg",
-                          colorFilter:
-                              ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                        // TajDesk stage 14: simple rectangular outline used
+                        // as a frame to host the display index number on top.
+                        const Icon(
+                          Icons.crop_landscape,
+                          size: 30,
+                          color: Colors.white,
                         ),
                         Obx(() => buildOneMonitorButton(i, display.value)),
                       ],
@@ -885,7 +902,8 @@ class _ControlMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return _IconSubmenuButton(
         tooltip: 'Control Actions',
-        svg: "assets/actions.svg",
+        // TajDesk stage 14: bolt icon for the "actions" / quick-controls menu.
+        icon: _ToolbarTheme.materialIcon(Icons.bolt_outlined),
         color: _ToolbarTheme.blueColor,
         hoverColor: _ToolbarTheme.hoverBlueColor,
         ffi: ffi,
@@ -1162,7 +1180,8 @@ class _DisplayMenuState extends State<_DisplayMenu> {
 
     return _IconSubmenuButton(
       tooltip: 'Display Settings',
-      svg: "assets/display.svg",
+      // TajDesk stage 14: monitor / display submenu.
+      icon: _ToolbarTheme.materialIcon(Icons.desktop_windows_outlined),
       ffi: widget.ffi,
       color: _ToolbarTheme.blueColor,
       hoverColor: _ToolbarTheme.hoverBlueColor,
@@ -1911,7 +1930,8 @@ class _KeyboardMenu extends StatelessWidget {
 
     return _IconSubmenuButton(
         tooltip: 'Keyboard Settings',
-        svg: "assets/keyboard_mouse.svg",
+        // TajDesk stage 14: keyboard / input submenu.
+        icon: _ToolbarTheme.materialIcon(Icons.keyboard_outlined),
         ffi: ffi,
         color: _ToolbarTheme.blueColor,
         hoverColor: _ToolbarTheme.hoverBlueColor,
@@ -2186,7 +2206,8 @@ class _ChatMenuState extends State<_ChatMenu> {
       return _IconSubmenuButton(
           tooltip: 'Chat',
           key: chatButtonKey,
-          svg: 'assets/chat.svg',
+          // TajDesk stage 14: chat bubble for the chat/voice submenu.
+          icon: _ToolbarTheme.materialIcon(Icons.chat_bubble_outline),
           ffi: widget.ffi,
           color: _ToolbarTheme.blueColor,
           hoverColor: _ToolbarTheme.hoverBlueColor,
@@ -2196,7 +2217,8 @@ class _ChatMenuState extends State<_ChatMenu> {
 
   buildTextChatButton() {
     return _IconMenuButton(
-      assetName: 'assets/message_24dp_5F6368.svg',
+      // TajDesk stage 14: text-chat shortcut (web mode entry point).
+      icon: _ToolbarTheme.materialIcon(Icons.chat_outlined),
       tooltip: 'Text chat',
       key: chatButtonKey,
       onPressed: _textChatOnPressed,
@@ -2291,7 +2313,8 @@ class _VoiceCallMenu extends StatelessWidget {
           case VoiceCallStatus.connected:
             return _IconSubmenuButton(
               tooltip: 'Voice call',
-              svg: 'assets/voice_call.svg',
+              // TajDesk stage 14: phone handset for an active voice call.
+              icon: _ToolbarTheme.materialIcon(Icons.call_outlined),
               color: _ToolbarTheme.blueColor,
               hoverColor: _ToolbarTheme.hoverBlueColor,
               menuChildrenGetter: menuChildrenGetter,
@@ -2306,7 +2329,8 @@ class _VoiceCallMenu extends StatelessWidget {
 
   Widget buildCallWaiting(BuildContext context) {
     return _IconMenuButton(
-      assetName: "assets/call_wait.svg",
+      // TajDesk stage 14: "ringing" / awaiting-pickup state for voice call.
+      icon: _ToolbarTheme.materialIcon(Icons.phone_in_talk_outlined),
       tooltip: "Waiting",
       onPressed: () => bind.sessionCloseVoiceCall(sessionId: ffi.sessionId),
       color: _ToolbarTheme.redColor,
@@ -2370,7 +2394,8 @@ class _RecordMenuState extends State<_RecordMenu>
     }
 
     final btn = _IconMenuButton(
-      assetName: 'assets/rec.svg',
+      // TajDesk stage 14: solid filled dot — universal "recording" glyph.
+      icon: _ToolbarTheme.materialIcon(Icons.fiber_manual_record),
       tooltip: isRecording
           ? 'Stop session recording'
           : 'Start session recording',
@@ -2435,7 +2460,8 @@ class _CloseMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _IconMenuButton(
-      assetName: 'assets/close.svg',
+      // TajDesk stage 14: end-session close icon.
+      icon: _ToolbarTheme.materialIcon(Icons.close),
       tooltip: 'Close',
       onPressed: () async {
         if (await showConnEndAuditDialogCloseCanceled(ffi: ffi)) {
