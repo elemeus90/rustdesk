@@ -148,16 +148,6 @@ class _ToolbarTheme {
   static Color? dividerColor(BuildContext context) =>
       MyTheme.color(context).divider;
 
-  // TajDesk stage 14: helper for rendering a Material icon in the toolbar
-  // in place of the original RustDesk SVG assets. Centered inside the 32×32
-  // button bounding box at 22px so the visual weight matches the old SVGs
-  // (which had built-in padding inside their viewBox). White by default —
-  // tinting comes from the surrounding button background, not the icon
-  // itself, exactly like the SVGs did with their srcIn colour filter.
-  static Widget materialIcon(IconData data, {double size = 22}) => Center(
-        child: Icon(data, color: Colors.white, size: size),
-      );
-
   // TajDesk stage 12: vertical separator between logical groups of toolbar
   // buttons. Thin hairline tinted to match the glass surface — readable on
   // both light and dark wallpapers without screaming for attention.
@@ -432,8 +422,28 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
       final borderRadius = BorderRadius.vertical(
         bottom: Radius.circular(5),
       );
+      // TajDesk stage 15: anchor chip to the toolbar while it is expanded.
+      //
+      // Original RustDesk used FractionalOffset(_fractionX, 0) in BOTH states,
+      // but the parent Align in the expanded state is the narrow Column (~width
+      // of the glass panel), while in the collapsed state its parent stretches
+      // to the full screen width. Same _fractionX, two different pixel
+      // coordinates — the chip would drift away from the toolbar after a few
+      // drag/collapse cycles. After our visual polish (smooth animation,
+      // group dividers, transparent buttons) the toolbar reads as one piece
+      // and that drift became really visible.
+      //
+      // Fix: while expanded, chip sits dead-centre under the toolbar (and its
+      // drag handle is disabled — see _DraggableShowHide). Only while
+      // collapsed does the user-saved _fractionX position kick in. After the
+      // user collapses, the chip can be dragged anywhere; on re-expand it
+      // snaps back under the toolbar.
+      final isCollapsed = collapse.isTrue;
+      final alignment = isCollapsed
+          ? FractionalOffset(_fractionX.value, 0)
+          : Alignment.topCenter;
       return Align(
-        alignment: FractionalOffset(_fractionX.value, 0),
+        alignment: alignment,
         child: Offstage(
           offstage: _dragging.isTrue,
           child: Material(
@@ -445,6 +455,10 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
               sessionId: widget.ffi.sessionId,
               dragging: _dragging,
               fractionX: _fractionX,
+              // TajDesk stage 15: only enable drag while the toolbar is
+              // collapsed. While it's expanded the chip is glued to the
+              // toolbar, so dragging would silently desync them.
+              dragEnabled: isCollapsed,
               toolbarState: widget.state,
               setFullscreen: _setFullscreen,
               setMinimize: _minimize,
@@ -617,11 +631,7 @@ class _PinMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return Obx(
       () => _IconMenuButton(
-        // TajDesk stage 14: Material push_pin (filled when pinned, outlined
-        // when unpinned). Two states are visually distinct without colour.
-        icon: _ToolbarTheme.materialIcon(
-          state.pin ? Icons.push_pin : Icons.push_pin_outlined,
-        ),
+        assetName: state.pin ? "assets/pinned.svg" : "assets/unpinned.svg",
         tooltip: state.pin ? 'Unpin Toolbar' : 'Pin Toolbar',
         onPressed: state.switchPin,
         color:
@@ -642,8 +652,7 @@ class _MobileActionMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!ffi.ffiModel.isPeerAndroid) return Offstage();
     return Obx(() => _IconMenuButton(
-          // TajDesk stage 14: touch gesture icon for mobile actions overlay.
-          icon: _ToolbarTheme.materialIcon(Icons.touch_app_outlined),
+          assetName: 'assets/actions_mobile.svg',
           tooltip: 'Mobile Actions',
           onPressed: () => ffi.dialogManager.setMobileActionsOverlayVisible(
               !ffi.dialogManager.mobileActionsOverlayVisible.value),
@@ -776,12 +785,10 @@ class _MonitorMenu extends StatelessWidget {
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        // TajDesk stage 14: simple rectangular outline used
-                        // as a frame to host the display index number on top.
-                        const Icon(
-                          Icons.crop_landscape,
-                          size: 30,
-                          color: Colors.white,
+                        SvgPicture.asset(
+                          "assets/screen.svg",
+                          colorFilter:
+                              ColorFilter.mode(Colors.white, BlendMode.srcIn),
                         ),
                         Obx(() => buildOneMonitorButton(i, display.value)),
                       ],
@@ -902,8 +909,7 @@ class _ControlMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return _IconSubmenuButton(
         tooltip: 'Control Actions',
-        // TajDesk stage 14: bolt icon for the "actions" / quick-controls menu.
-        icon: _ToolbarTheme.materialIcon(Icons.bolt_outlined),
+        svg: "assets/actions.svg",
         color: _ToolbarTheme.blueColor,
         hoverColor: _ToolbarTheme.hoverBlueColor,
         ffi: ffi,
@@ -1180,8 +1186,7 @@ class _DisplayMenuState extends State<_DisplayMenu> {
 
     return _IconSubmenuButton(
       tooltip: 'Display Settings',
-      // TajDesk stage 14: monitor / display submenu.
-      icon: _ToolbarTheme.materialIcon(Icons.desktop_windows_outlined),
+      svg: "assets/display.svg",
       ffi: widget.ffi,
       color: _ToolbarTheme.blueColor,
       hoverColor: _ToolbarTheme.hoverBlueColor,
@@ -1930,8 +1935,7 @@ class _KeyboardMenu extends StatelessWidget {
 
     return _IconSubmenuButton(
         tooltip: 'Keyboard Settings',
-        // TajDesk stage 14: keyboard / input submenu.
-        icon: _ToolbarTheme.materialIcon(Icons.keyboard_outlined),
+        svg: "assets/keyboard_mouse.svg",
         ffi: ffi,
         color: _ToolbarTheme.blueColor,
         hoverColor: _ToolbarTheme.hoverBlueColor,
@@ -2206,8 +2210,7 @@ class _ChatMenuState extends State<_ChatMenu> {
       return _IconSubmenuButton(
           tooltip: 'Chat',
           key: chatButtonKey,
-          // TajDesk stage 14: chat bubble for the chat/voice submenu.
-          icon: _ToolbarTheme.materialIcon(Icons.chat_bubble_outline),
+          svg: 'assets/chat.svg',
           ffi: widget.ffi,
           color: _ToolbarTheme.blueColor,
           hoverColor: _ToolbarTheme.hoverBlueColor,
@@ -2217,8 +2220,7 @@ class _ChatMenuState extends State<_ChatMenu> {
 
   buildTextChatButton() {
     return _IconMenuButton(
-      // TajDesk stage 14: text-chat shortcut (web mode entry point).
-      icon: _ToolbarTheme.materialIcon(Icons.chat_outlined),
+      assetName: 'assets/message_24dp_5F6368.svg',
       tooltip: 'Text chat',
       key: chatButtonKey,
       onPressed: _textChatOnPressed,
@@ -2313,8 +2315,7 @@ class _VoiceCallMenu extends StatelessWidget {
           case VoiceCallStatus.connected:
             return _IconSubmenuButton(
               tooltip: 'Voice call',
-              // TajDesk stage 14: phone handset for an active voice call.
-              icon: _ToolbarTheme.materialIcon(Icons.call_outlined),
+              svg: 'assets/voice_call.svg',
               color: _ToolbarTheme.blueColor,
               hoverColor: _ToolbarTheme.hoverBlueColor,
               menuChildrenGetter: menuChildrenGetter,
@@ -2329,8 +2330,7 @@ class _VoiceCallMenu extends StatelessWidget {
 
   Widget buildCallWaiting(BuildContext context) {
     return _IconMenuButton(
-      // TajDesk stage 14: "ringing" / awaiting-pickup state for voice call.
-      icon: _ToolbarTheme.materialIcon(Icons.phone_in_talk_outlined),
+      assetName: "assets/call_wait.svg",
       tooltip: "Waiting",
       onPressed: () => bind.sessionCloseVoiceCall(sessionId: ffi.sessionId),
       color: _ToolbarTheme.redColor,
@@ -2394,8 +2394,7 @@ class _RecordMenuState extends State<_RecordMenu>
     }
 
     final btn = _IconMenuButton(
-      // TajDesk stage 14: solid filled dot — universal "recording" glyph.
-      icon: _ToolbarTheme.materialIcon(Icons.fiber_manual_record),
+      assetName: 'assets/rec.svg',
       tooltip: isRecording
           ? 'Stop session recording'
           : 'Start session recording',
@@ -2460,8 +2459,7 @@ class _CloseMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _IconMenuButton(
-      // TajDesk stage 14: end-session close icon.
-      icon: _ToolbarTheme.materialIcon(Icons.close),
+      assetName: 'assets/close.svg',
       tooltip: 'Close',
       onPressed: () async {
         if (await showConnEndAuditDialogCloseCanceled(ffi: ffi)) {
@@ -2763,6 +2761,10 @@ class _DraggableShowHide extends StatefulWidget {
   final RxBool dragging;
   final ToolbarState toolbarState;
   final BorderRadius borderRadius;
+  // TajDesk stage 15: when false, the drag handle becomes a static dim icon —
+  // tapping/dragging it does nothing. Used while the toolbar is expanded to
+  // prevent the chip from drifting away from the toolbar.
+  final bool dragEnabled;
 
   final Function(bool) setFullscreen;
   final Function() setMinimize;
@@ -2777,6 +2779,7 @@ class _DraggableShowHide extends StatefulWidget {
     required this.setFullscreen,
     required this.setMinimize,
     required this.borderRadius,
+    this.dragEnabled = true,
   }) : super(key: key);
 
   @override
@@ -2821,6 +2824,19 @@ class _DraggableShowHideState extends State<_DraggableShowHide> {
     // same 2×3 dot grid (familiar pattern from Notion / Linear) but force
     // a white tint with a clearly readable opacity, plus a touch of left
     // padding so it doesn't kiss the chip border.
+    //
+    // TajDesk stage 15: when drag is disabled (toolbar expanded), render the
+    // glyph as a static, dimmer icon to signal "not interactive here".
+    if (!widget.dragEnabled) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        child: Icon(
+          Icons.drag_indicator,
+          size: 18,
+          color: Colors.white.withOpacity(0.22),
+        ),
+      );
+    }
     return Draggable(
       axis: Axis.horizontal,
       child: Padding(
