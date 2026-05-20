@@ -148,6 +148,51 @@ class _ToolbarTheme {
   static Color? dividerColor(BuildContext context) =>
       MyTheme.color(context).divider;
 
+  // TajDesk stage 12: vertical separator between logical groups of toolbar
+  // buttons. Thin hairline tinted to match the glass surface — readable on
+  // both light and dark wallpapers without screaming for attention.
+  static Widget groupDivider() => Container(
+        width: 1,
+        height: 22,
+        margin: const EdgeInsets.symmetric(horizontal: 5),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(1),
+        ),
+      );
+
+  // TajDesk stage 12: unified tooltip styling for every tooltip inside the
+  // remote toolbar (both expanded panel and collapsed chip). Dark graphite
+  // surface, soft shadow, rounded 6px corners — matches the rest of the UI
+  // and replaces Flutter's stock sharp-edged grey balloon.
+  static TooltipThemeData tooltipTheme() => TooltipThemeData(
+        waitDuration: const Duration(milliseconds: 350),
+        verticalOffset: 22,
+        preferBelow: true,
+        textStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          letterSpacing: 0.1,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E2230).withOpacity(0.96),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.08),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.30),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+      );
+
   static MenuStyle defaultMenuStyle(BuildContext context) => MenuStyle(
         side: MaterialStateProperty.all(BorderSide(
           width: 1,
@@ -331,11 +376,40 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
       if (hide.value) {
         return const SizedBox.shrink();
       }
+      // TajDesk stage 12:
+      //   * TooltipTheme — overrides every Tooltip in subtree with our
+      //     graphite/rounded styling instead of Flutter's stock grey balloon.
+      //   * AnimatedSwitcher — smooth fade + size morph between the expanded
+      //     toolbar and the collapsed chip (was an instant snap before).
       return Align(
         alignment: Alignment.topCenter,
-        child: collapse.isFalse
-            ? _buildToolbar(context)
-            : _buildDraggableCollapse(context),
+        child: TooltipTheme(
+          data: _ToolbarTheme.tooltipTheme(),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            transitionBuilder: (child, animation) {
+              return FadeTransition(
+                opacity: animation,
+                child: SizeTransition(
+                  sizeFactor: animation,
+                  axisAlignment: -1.0,
+                  child: child,
+                ),
+              );
+            },
+            child: collapse.isFalse
+                ? KeyedSubtree(
+                    key: const ValueKey('tajdesk-toolbar-expanded'),
+                    child: _buildToolbar(context),
+                  )
+                : KeyedSubtree(
+                    key: const ValueKey('tajdesk-toolbar-collapsed'),
+                    child: _buildDraggableCollapse(context),
+                  ),
+          ),
+        ),
       );
     });
   }
@@ -373,13 +447,26 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
   }
 
   Widget _buildToolbar(BuildContext context) {
-    final List<Widget> toolbarItems = [];
-    toolbarItems.add(_PinMenu(state: widget.state));
-    if (!isWebDesktop) {
-      toolbarItems.add(_MobileActionMenu(ffi: widget.ffi));
-    }
+    // TajDesk stage 12: structure buttons into logical groups so we can
+    // insert thin vertical dividers between them. Order is preserved 1:1
+    // with the original RustDesk layout — only visual grouping changes.
+    //   group 1: pin + mobile actions
+    //   group 2: monitor switcher + control menu
+    //   group 3: display settings + keyboard
+    //   group 4: chat + voice call
+    //   group 5: record
+    //   group 6: close
+    final List<List<Widget>> groups = [];
 
-    toolbarItems.add(Obx(() {
+    final g1 = <Widget>[];
+    g1.add(_PinMenu(state: widget.state));
+    if (!isWebDesktop) {
+      g1.add(_MobileActionMenu(ffi: widget.ffi));
+    }
+    groups.add(g1);
+
+    final g2 = <Widget>[];
+    g2.add(Obx(() {
       if ((PrivacyModeState.find(widget.id).isEmpty ||
               allowDisplaySwitchInPrivacyMode(pi)) &&
           pi.displaysCount.value > 1) {
@@ -391,10 +478,11 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
         return Offstage();
       }
     }));
+    g2.add(_ControlMenu(id: widget.id, ffi: widget.ffi, state: widget.state));
+    groups.add(g2);
 
-    toolbarItems
-        .add(_ControlMenu(id: widget.id, ffi: widget.ffi, state: widget.state));
-    toolbarItems.add(_DisplayMenu(
+    final g3 = <Widget>[];
+    g3.add(_DisplayMenu(
       id: widget.id,
       ffi: widget.ffi,
       state: widget.state,
@@ -402,14 +490,35 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
     ));
     // Do not show keyboard for camera connection type.
     if (widget.ffi.connType == ConnType.defaultConn) {
-      toolbarItems.add(_KeyboardMenu(id: widget.id, ffi: widget.ffi));
+      g3.add(_KeyboardMenu(id: widget.id, ffi: widget.ffi));
     }
-    toolbarItems.add(_ChatMenu(id: widget.id, ffi: widget.ffi));
+    groups.add(g3);
+
+    final g4 = <Widget>[];
+    g4.add(_ChatMenu(id: widget.id, ffi: widget.ffi));
     if (!isWeb) {
-      toolbarItems.add(_VoiceCallMenu(id: widget.id, ffi: widget.ffi));
+      g4.add(_VoiceCallMenu(id: widget.id, ffi: widget.ffi));
     }
-    if (!isWeb) toolbarItems.add(_RecordMenu());
-    toolbarItems.add(_CloseMenu(id: widget.id, ffi: widget.ffi));
+    groups.add(g4);
+
+    if (!isWeb) groups.add([_RecordMenu()]);
+    groups.add([_CloseMenu(id: widget.id, ffi: widget.ffi)]);
+
+    // Stitch the groups together. Drop empty groups; insert one hairline
+    // divider between every pair of consecutive non-empty groups.
+    final List<Widget> rowChildren = [];
+    rowChildren.add(SizedBox(width: _ToolbarTheme.buttonHMargin * 2));
+    bool firstGroup = true;
+    for (final group in groups) {
+      if (group.isEmpty) continue;
+      if (!firstGroup) {
+        rowChildren.add(_ToolbarTheme.groupDivider());
+      }
+      rowChildren.addAll(group);
+      firstGroup = false;
+    }
+    rowChildren.add(SizedBox(width: _ToolbarTheme.buttonHMargin * 2));
+
     // TajDesk: floating glass toolbar — softer corners and bigger radius
     final toolbarBorderRadius = BorderRadius.all(Radius.circular(12.0));
     return Column(
@@ -442,11 +551,7 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
                       borderRadius: toolbarBorderRadius,
                     ),
                     child: Row(
-                      children: [
-                        SizedBox(width: _ToolbarTheme.buttonHMargin * 2),
-                        ...toolbarItems,
-                        SizedBox(width: _ToolbarTheme.buttonHMargin * 2)
-                      ],
+                      children: rowChildren,
                     ),
                   ),
                 ),
@@ -2204,8 +2309,36 @@ class _VoiceCallMenu extends StatelessWidget {
   }
 }
 
-class _RecordMenu extends StatelessWidget {
+// TajDesk stage 12: live recording indicator.
+// While a session is being recorded we draw a small red dot in the top-right
+// corner of the rec button and pulse it with an opacity + glow loop so it's
+// obvious from across the room that recording is active. When recording is
+// off, the widget collapses to the original behaviour.
+class _RecordMenu extends StatefulWidget {
   const _RecordMenu({Key? key}) : super(key: key);
+
+  @override
+  State<_RecordMenu> createState() => _RecordMenuState();
+}
+
+class _RecordMenuState extends State<_RecordMenu>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2214,18 +2347,75 @@ class _RecordMenu extends StatelessWidget {
     final visible =
         (recordingModel.start || ffi.permissions['recording'] != false);
     if (!visible) return Offstage();
-    return _IconMenuButton(
+
+    final isRecording = recordingModel.start;
+    // Keep the pulse animation in sync with the recording state. We do this
+    // in build (rather than didUpdateWidget) because the trigger comes from
+    // the provider, not from a widget config change.
+    if (isRecording) {
+      if (!_pulse.isAnimating) {
+        _pulse.repeat(reverse: true);
+      }
+    } else {
+      if (_pulse.isAnimating) {
+        _pulse.stop();
+      }
+      _pulse.value = 0.0;
+    }
+
+    final btn = _IconMenuButton(
       assetName: 'assets/rec.svg',
-      tooltip: recordingModel.start
+      tooltip: isRecording
           ? 'Stop session recording'
           : 'Start session recording',
       onPressed: () => recordingModel.toggle(),
-      color: recordingModel.start
+      color: isRecording
           ? _ToolbarTheme.redColor
           : _ToolbarTheme.blueColor,
-      hoverColor: recordingModel.start
+      hoverColor: isRecording
           ? _ToolbarTheme.hoverRedColor
           : _ToolbarTheme.hoverBlueColor,
+    );
+
+    if (!isRecording) return btn;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        btn,
+        Positioned(
+          top: 6,
+          right: 4,
+          child: IgnorePointer(
+            child: AnimatedBuilder(
+              animation: _pulse,
+              builder: (_, __) {
+                final t = _pulse.value;
+                return Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color.lerp(
+                      const Color(0xFFFF5252).withOpacity(0.55),
+                      const Color(0xFFFF1744),
+                      t,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color:
+                            const Color(0xFFFF1744).withOpacity(0.25 + 0.40 * t),
+                        blurRadius: 5 + 5 * t,
+                        spreadRadius: 0.5 + 1.0 * t,
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -2592,12 +2782,22 @@ class _DraggableShowHideState extends State<_DraggableShowHide> {
   }
 
   Widget _buildDraggable(BuildContext context) {
+    // TajDesk stage 12: a more visible drag handle on the collapsed chip.
+    // The stock Material `drag_indicator` glyph in the default theme colour
+    // tends to disappear against the frosted-glass background, leaving
+    // first-time users with no clue the chip can be dragged. We keep the
+    // same 2×3 dot grid (familiar pattern from Notion / Linear) but force
+    // a white tint with a clearly readable opacity, plus a touch of left
+    // padding so it doesn't kiss the chip border.
     return Draggable(
       axis: Axis.horizontal,
-      child: Icon(
-        Icons.drag_indicator,
-        size: 20,
-        color: MyTheme.color(context).drag_indicator,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        child: Icon(
+          Icons.drag_indicator,
+          size: 18,
+          color: Colors.white.withOpacity(0.55),
+        ),
       ),
       feedback: widget,
       onDragStarted: (() {
