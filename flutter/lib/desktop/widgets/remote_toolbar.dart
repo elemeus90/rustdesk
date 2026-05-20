@@ -381,8 +381,23 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
       //     graphite/rounded styling instead of Flutter's stock grey balloon.
       //   * AnimatedSwitcher — smooth fade + size morph between the expanded
       //     toolbar and the collapsed chip (was an instant snap before).
+      //
+      // TajDesk stage 16: position the WHOLE assembly by _fractionX, not just
+      // the chip. When the user drags the chip while collapsed and then
+      // expands the toolbar, the toolbar now opens above the chip — instead
+      // of snapping back to the centre while the chip flies in to meet it.
+      // The two pieces no longer fly apart.
+      //
+      // We use FractionalOffset(_fractionX, 0) here ALWAYS (in both states).
+      // Column[panel, chip] in expanded state is positioned as a unit, and
+      // the chip alone in collapsed state is positioned by the same fraction.
+      // Centre offsets between the two states aren't perfectly identical
+      // (Column is wider than the chip, so FractionalOffset places their
+      // left edges by the same fraction of slack space, not their centres),
+      // but the drift is small around the middle of the screen and the
+      // behaviour finally matches what users intuitively expect.
       return Align(
-        alignment: Alignment.topCenter,
+        alignment: FractionalOffset(_fractionX.value, 0),
         child: TooltipTheme(
           data: _ToolbarTheme.tooltipTheme(),
           child: AnimatedSwitcher(
@@ -422,48 +437,35 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
       final borderRadius = BorderRadius.vertical(
         bottom: Radius.circular(5),
       );
-      // TajDesk stage 15: anchor chip to the toolbar while it is expanded.
+      // TajDesk stage 16: no internal Align here anymore. The outer Align in
+      // build() positions the whole assembly (toolbar + chip when expanded,
+      // chip alone when collapsed) by _fractionX. Removing this inner
+      // FractionalOffset wrapper means the chip's horizontal position is
+      // driven from a single source of truth — the outer Align — instead of
+      // double-positioning that used to make them drift apart.
       //
-      // Original RustDesk used FractionalOffset(_fractionX, 0) in BOTH states,
-      // but the parent Align in the expanded state is the narrow Column (~width
-      // of the glass panel), while in the collapsed state its parent stretches
-      // to the full screen width. Same _fractionX, two different pixel
-      // coordinates — the chip would drift away from the toolbar after a few
-      // drag/collapse cycles. After our visual polish (smooth animation,
-      // group dividers, transparent buttons) the toolbar reads as one piece
-      // and that drift became really visible.
-      //
-      // Fix: while expanded, chip sits dead-centre under the toolbar (and its
-      // drag handle is disabled — see _DraggableShowHide). Only while
-      // collapsed does the user-saved _fractionX position kick in. After the
-      // user collapses, the chip can be dragged anywhere; on re-expand it
-      // snaps back under the toolbar.
-      final isCollapsed = collapse.isTrue;
-      final alignment = isCollapsed
-          ? FractionalOffset(_fractionX.value, 0)
-          : Alignment.topCenter;
-      return Align(
-        alignment: alignment,
-        child: Offstage(
-          offstage: _dragging.isTrue,
-          child: Material(
-            elevation: _ToolbarTheme.elevation,
-            shadowColor: MyTheme.color(context).shadow,
+      // We keep the dragEnabled gate from stage 15: drag works only while
+      // collapsed. In the expanded state the chip is glued to the bottom of
+      // the toolbar through the Column's cross-axis centring, and dragging
+      // would desync it from the toolbar above (their widths differ, so the
+      // existing chip-width-based drag maths can't move the toolbar by the
+      // same pixel delta).
+      return Offstage(
+        offstage: _dragging.isTrue,
+        child: Material(
+          elevation: _ToolbarTheme.elevation,
+          shadowColor: MyTheme.color(context).shadow,
+          borderRadius: borderRadius,
+          child: _DraggableShowHide(
+            id: widget.id,
+            sessionId: widget.ffi.sessionId,
+            dragging: _dragging,
+            fractionX: _fractionX,
+            dragEnabled: collapse.isTrue,
+            toolbarState: widget.state,
+            setFullscreen: _setFullscreen,
+            setMinimize: _minimize,
             borderRadius: borderRadius,
-            child: _DraggableShowHide(
-              id: widget.id,
-              sessionId: widget.ffi.sessionId,
-              dragging: _dragging,
-              fractionX: _fractionX,
-              // TajDesk stage 15: only enable drag while the toolbar is
-              // collapsed. While it's expanded the chip is glued to the
-              // toolbar, so dragging would silently desync them.
-              dragEnabled: isCollapsed,
-              toolbarState: widget.state,
-              setFullscreen: _setFullscreen,
-              setMinimize: _minimize,
-              borderRadius: borderRadius,
-            ),
           ),
         ),
       );
