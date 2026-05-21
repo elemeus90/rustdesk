@@ -440,125 +440,198 @@ class _CmHeaderState extends State<_CmHeader>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    // TajDesk stage 19: replaced the screaming cyan-blue gradient header with
+    // a quiet graphite card that picks up our brand accent only as a thin
+    // top-edge highlight. Premium-app feel (think macOS / Linear) instead of
+    // consumer-app cheerfulness. The status line below shows a small coloured
+    // dot for at-a-glance state (orange = pending request, green = connected,
+    // grey = disconnected).
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor =
+        isDark ? const Color(0xFF1A1E2A) : const Color(0xFFF5F6F9);
+    final primaryText =
+        isDark ? Colors.white : const Color(0xFF1A1E2A);
+    final secondaryText = isDark
+        ? Colors.white.withOpacity(0.55)
+        : Colors.black.withOpacity(0.55);
+    final accent = MyTheme.accent;
+    final statusColor = client.authorized
+        ? (client.disconnected
+            ? const Color(0xFF8C95A4) // grey
+            : const Color(0xFF22C55E)) // green
+        : const Color(0xFFF59E0B); // amber — pending request
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10.0),
-        gradient: LinearGradient(
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-          colors: [
-            Color(0xff00bfe1),
-            Color(0xff0071ff),
-          ],
+        borderRadius: BorderRadius.circular(14.0),
+        color: cardColor,
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withOpacity(0.06)
+              : Colors.black.withOpacity(0.06),
+          width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.35 : 0.08),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      margin: EdgeInsets.symmetric(horizontal: 5.0, vertical: 10.0),
-      padding: EdgeInsets.only(
-        top: 10.0,
-        bottom: 10.0,
-        left: 10.0,
-        right: 5.0,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
+      padding: const EdgeInsets.fromLTRB(14, 12, 10, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          _buildClientAvatar().marginOnly(right: 10.0),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                FittedBox(
-                    child: Text(
-                  client.name,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  maxLines: 1,
-                )),
-                FittedBox(
-                  child: Text(
-                    "(${client.peerId})",
-                    style: TextStyle(color: Colors.white, fontSize: 14),
-                  ),
-                ),
-                if (client.type_() == ClientType.terminal)
-                  FittedBox(
-                    child: Text(
-                      translate("Terminal"),
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
-                    ),
-                  ),
-                if (client.type_() == ClientType.file)
-                  FittedBox(
-                    child: Text(
-                      translate("File Transfer"),
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
-                    ),
-                  ),
-                if (client.type_() == ClientType.camera)
-                  FittedBox(
-                    child: Text(
-                      translate("View Camera"),
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
-                    ),
-                  ),
-                if (client.portForward.isNotEmpty)
-                  FittedBox(
-                    child: Text(
-                      "Port Forward: ${client.portForward}",
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
-                    ),
-                  ),
-                SizedBox(height: 10.0),
-                FittedBox(
-                    child: Row(
-                  children: [
-                    Text(
-                      client.authorized
-                          ? client.disconnected
-                              ? translate("Disconnected")
-                              : translate("Connected")
-                          : "${translate("Request access to your device")}...",
-                      style: TextStyle(color: Colors.white),
-                    ).marginOnly(right: 8.0),
-                    if (client.authorized)
-                      Obx(
-                        () => Text(
-                          formatDurationToTime(
-                            Duration(seconds: _time.value),
-                          ),
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      )
-                  ],
-                ))
-              ],
+          // Thin accent highlight strip at the top — only colour intrusion.
+          Container(
+            height: 2,
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  accent.withOpacity(0.0),
+                  accent.withOpacity(0.85),
+                  accent.withOpacity(0.0),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(2),
             ),
           ),
-          Offstage(
-            offstage: !client.authorized ||
-                (client.type_() != ClientType.remote &&
-                    client.type_() != ClientType.file &&
-                    client.type_() != ClientType.camera),
-            child: IconButton(
-              onPressed: () => checkClickTime(client.id, () {
-                if (client.type_() == ClientType.file) {
-                  gFFI.chatModel.toggleCMFilePage();
-                } else {
-                  gFFI.chatModel
-                      .toggleCMChatPage(MessageKey(client.peerId, client.id));
-                }
-              }),
-              icon: SvgPicture.asset(client.type_() == ClientType.file
-                  ? 'assets/file_transfer.svg'
-                  : 'assets/chat2.svg'),
-              splashRadius: kDesktopIconButtonSplashRadius,
-            ),
-          )
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildClientAvatar().marginOnly(right: 14.0),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    FittedBox(
+                        child: Text(
+                      client.name,
+                      style: TextStyle(
+                        color: primaryText,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 19,
+                        letterSpacing: -0.2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      maxLines: 1,
+                    )),
+                    const SizedBox(height: 2),
+                    FittedBox(
+                      child: Text(
+                        "ID ${client.peerId}",
+                        style: TextStyle(
+                          color: secondaryText,
+                          fontSize: 12,
+                          fontFamily: 'monospace',
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                    ),
+                    if (client.type_() == ClientType.terminal)
+                      FittedBox(
+                        child: Text(
+                          translate("Terminal"),
+                          style: TextStyle(color: secondaryText, fontSize: 12),
+                        ),
+                      ),
+                    if (client.type_() == ClientType.file)
+                      FittedBox(
+                        child: Text(
+                          translate("File Transfer"),
+                          style: TextStyle(color: secondaryText, fontSize: 12),
+                        ),
+                      ),
+                    if (client.type_() == ClientType.camera)
+                      FittedBox(
+                        child: Text(
+                          translate("View Camera"),
+                          style: TextStyle(color: secondaryText, fontSize: 12),
+                        ),
+                      ),
+                    if (client.portForward.isNotEmpty)
+                      FittedBox(
+                        child: Text(
+                          "Port Forward: ${client.portForward}",
+                          style: TextStyle(color: secondaryText, fontSize: 12),
+                        ),
+                      ),
+                    const SizedBox(height: 10.0),
+                    FittedBox(
+                        child: Row(
+                      children: [
+                        // Status dot
+                        Container(
+                          width: 8,
+                          height: 8,
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            color: statusColor,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: statusColor.withOpacity(0.5),
+                                blurRadius: 4,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          client.authorized
+                              ? client.disconnected
+                                  ? translate("Disconnected")
+                                  : translate("Connected")
+                              : "${translate("Request access to your device")}…",
+                          style: TextStyle(
+                            color: primaryText.withOpacity(0.85),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ).marginOnly(right: 8.0),
+                        if (client.authorized)
+                          Obx(
+                            () => Text(
+                              formatDurationToTime(
+                                Duration(seconds: _time.value),
+                              ),
+                              style: TextStyle(
+                                color: secondaryText,
+                                fontSize: 13,
+                                fontFamily: 'monospace',
+                              ),
+                            ),
+                          )
+                      ],
+                    ))
+                  ],
+                ),
+              ),
+              Offstage(
+                offstage: !client.authorized ||
+                    (client.type_() != ClientType.remote &&
+                        client.type_() != ClientType.file &&
+                        client.type_() != ClientType.camera),
+                child: IconButton(
+                  onPressed: () => checkClickTime(client.id, () {
+                    if (client.type_() == ClientType.file) {
+                      gFFI.chatModel.toggleCMFilePage();
+                    } else {
+                      gFFI.chatModel.toggleCMChatPage(
+                          MessageKey(client.peerId, client.id));
+                    }
+                  }),
+                  icon: SvgPicture.asset(client.type_() == ClientType.file
+                      ? 'assets/file_transfer.svg'
+                      : 'assets/chat2.svg'),
+                  splashRadius: kDesktopIconButtonSplashRadius,
+                ),
+              )
+            ],
+          ),
         ],
       ),
     );
@@ -570,28 +643,59 @@ class _CmHeaderState extends State<_CmHeader>
   Widget _buildClientAvatar() {
     return buildAvatarWidget(
           avatar: client.avatar,
-          size: 70,
-          borderRadius: 15,
+          // TajDesk stage 19: avatar shrunk from 70 to 56 to match the
+          // calmer card proportions; corner radius reduced for the same
+          // reason.
+          size: 56,
+          borderRadius: 12,
           fallback: _buildInitialAvatar(),
         ) ??
         _buildInitialAvatar();
   }
 
   Widget _buildInitialAvatar() {
+    // TajDesk stage 19: avatar block restyled to look like a single quiet
+    // tile in the card — soft tinted background derived from the user's
+    // name colour, smaller corner radius matching the card, thin top
+    // highlight for depth, single big initial letter at modest weight
+    // (was: blaring 55px bold initial in a saturated solid block).
+    final base = str2color(client.name);
     return Container(
-      width: 70,
-      height: 70,
+      width: 56,
+      height: 56,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: str2color(client.name),
-        borderRadius: BorderRadius.circular(15.0),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            base.withOpacity(0.85),
+            HSLColor.fromColor(base)
+                .withLightness(
+                    (HSLColor.fromColor(base).lightness * 0.7).clamp(0.0, 1.0))
+                .toColor(),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12.0),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.12),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: base.withOpacity(0.35),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Text(
-        client.name.isNotEmpty ? client.name[0] : '?',
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
+        client.name.isNotEmpty ? client.name[0].toUpperCase() : '?',
+        style: const TextStyle(
+          fontWeight: FontWeight.w600,
           color: Colors.white,
-          fontSize: 55,
+          fontSize: 28,
+          letterSpacing: -0.5,
         ),
       ),
     );
@@ -644,204 +748,268 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
     );
   }
 
+  // TajDesk stage 19: new vertical-list row for each permission. Replaces
+  // the 4×2 grid of unlabelled blue tiles. Each row reads like an iOS / macOS
+  // settings entry — small icon in a tinted circle, full permission label,
+  // platform Switch on the right. Far more legible (no need to hover for
+  // tooltips), less consumer-app feel.
+  Widget buildPermissionRow(
+    bool enabled,
+    IconData iconData,
+    Function(bool)? onTap,
+    String label, {
+    required bool canModify,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = MyTheme.accent;
+    final iconBg = enabled
+        ? accent.withOpacity(0.18)
+        : (isDark
+            ? Colors.white.withOpacity(0.06)
+            : Colors.black.withOpacity(0.05));
+    final iconColor = enabled
+        ? accent
+        : (isDark
+            ? Colors.white.withOpacity(0.55)
+            : Colors.black.withOpacity(0.45));
+    final labelColor = canModify
+        ? (isDark ? Colors.white : const Color(0xFF1A1E2A))
+        : (isDark
+            ? Colors.white.withOpacity(0.40)
+            : Colors.black.withOpacity(0.40));
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: canModify
+          ? () => checkClickTime(widget.client.id, () => onTap?.call(!enabled))
+          : null,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        child: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: iconBg,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(iconData, size: 18, color: iconColor),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: labelColor,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            // Compact platform-style toggle.
+            Transform.scale(
+              scale: 0.85,
+              child: Switch(
+                value: enabled,
+                onChanged: canModify
+                    ? (v) => checkClickTime(
+                        widget.client.id, () => onTap?.call(v))
+                    : null,
+                activeColor: accent,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final crossAxisCount = 4;
-    final spacing = 10.0;
     final canModifyPermission =
         bind.mainGetBuildinOption(key: kOptionEnablePermChangeInAcceptWindow) !=
             'N';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor =
+        isDark ? const Color(0xFF1A1E2A) : const Color(0xFFF5F6F9);
+
+    // Build the permission row list depending on connection type.
+    final List<Widget> rows = [];
+    if (client.type_() == ClientType.camera) {
+      rows.add(buildPermissionRow(
+        client.audio,
+        Icons.volume_up_rounded,
+        (enabled) {
+          bind.cmSwitchPermission(
+              connId: client.id, name: "audio", enabled: enabled);
+          setState(() => client.audio = enabled);
+        },
+        translate('Enable audio'),
+        canModify: canModifyPermission,
+      ));
+      rows.add(buildPermissionRow(
+        client.recording,
+        Icons.videocam_rounded,
+        (enabled) {
+          bind.cmSwitchPermission(
+              connId: client.id, name: "recording", enabled: enabled);
+          setState(() => client.recording = enabled);
+        },
+        translate('Enable recording session'),
+        canModify: canModifyPermission,
+      ));
+    } else {
+      rows.add(buildPermissionRow(
+        client.keyboard,
+        Icons.keyboard_outlined,
+        (enabled) {
+          bind.cmSwitchPermission(
+              connId: client.id, name: "keyboard", enabled: enabled);
+          setState(() => client.keyboard = enabled);
+        },
+        translate('Enable keyboard/mouse'),
+        canModify: canModifyPermission,
+      ));
+      rows.add(buildPermissionRow(
+        client.clipboard,
+        Icons.assignment_outlined,
+        (enabled) {
+          bind.cmSwitchPermission(
+              connId: client.id, name: "clipboard", enabled: enabled);
+          setState(() => client.clipboard = enabled);
+        },
+        translate('Enable clipboard'),
+        canModify: canModifyPermission,
+      ));
+      rows.add(buildPermissionRow(
+        client.audio,
+        Icons.volume_up_outlined,
+        (enabled) {
+          bind.cmSwitchPermission(
+              connId: client.id, name: "audio", enabled: enabled);
+          setState(() => client.audio = enabled);
+        },
+        translate('Enable audio'),
+        canModify: canModifyPermission,
+      ));
+      rows.add(buildPermissionRow(
+        client.file,
+        Icons.folder_outlined,
+        (enabled) {
+          bind.cmSwitchPermission(
+              connId: client.id, name: "file", enabled: enabled);
+          setState(() => client.file = enabled);
+        },
+        translate('Enable file copy and paste'),
+        canModify: canModifyPermission,
+      ));
+      rows.add(buildPermissionRow(
+        client.restart,
+        Icons.restart_alt_outlined,
+        (enabled) {
+          bind.cmSwitchPermission(
+              connId: client.id, name: "restart", enabled: enabled);
+          setState(() => client.restart = enabled);
+        },
+        translate('Enable remote restart'),
+        canModify: canModifyPermission,
+      ));
+      rows.add(buildPermissionRow(
+        client.recording,
+        Icons.videocam_outlined,
+        (enabled) {
+          bind.cmSwitchPermission(
+              connId: client.id, name: "recording", enabled: enabled);
+          setState(() => client.recording = enabled);
+        },
+        translate('Enable recording session'),
+        canModify: canModifyPermission,
+      ));
+      if (isWindows) {
+        rows.add(buildPermissionRow(
+          client.blockInput,
+          Icons.block_outlined,
+          (enabled) {
+            bind.cmSwitchPermission(
+                connId: client.id, name: "block_input", enabled: enabled);
+            setState(() => client.blockInput = enabled);
+          },
+          translate('Enable blocking user input'),
+          canModify: canModifyPermission,
+        ));
+      }
+      if (bind.mainSupportedPrivacyModeImpls() != '[]') {
+        rows.add(buildPermissionRow(
+          client.privacyMode,
+          Icons.visibility_off_outlined,
+          (enabled) {
+            bind.cmSwitchPermission(
+                connId: client.id, name: "privacy_mode", enabled: enabled);
+            setState(() => client.privacyMode = enabled);
+          },
+          translate('Enable privacy mode'),
+          canModify: canModifyPermission,
+        ));
+      }
+    }
+
+    // Interleave thin separators between rows.
+    final List<Widget> children = [];
+    for (int i = 0; i < rows.length; i++) {
+      if (i > 0) {
+        children.add(Container(
+          height: 1,
+          margin: const EdgeInsets.only(left: 56, right: 12),
+          color: isDark
+              ? Colors.white.withOpacity(0.05)
+              : Colors.black.withOpacity(0.05),
+        ));
+      }
+      children.add(rows[i]);
+    }
+
     return Container(
       width: double.infinity,
-      height: 160.0,
-      margin: EdgeInsets.all(5.0),
-      padding: EdgeInsets.all(5.0),
+      margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10.0),
-        color: Theme.of(context).colorScheme.background,
+        borderRadius: BorderRadius.circular(14.0),
+        color: cardColor,
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withOpacity(0.06)
+              : Colors.black.withOpacity(0.06),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            spreadRadius: 1,
-            blurRadius: 1,
-            offset: Offset(0, 1.5),
+            color: Colors.black.withOpacity(isDark ? 0.20 : 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            translate("Permissions"),
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center,
-          ).marginOnly(left: 4.0, bottom: 8.0),
-          Expanded(
-            child: GridView.count(
-              crossAxisCount: crossAxisCount,
-              padding: EdgeInsets.symmetric(horizontal: spacing),
-              mainAxisSpacing: spacing,
-              crossAxisSpacing: spacing,
-              children: client.type_() == ClientType.camera
-                  ? [
-                      buildPermissionIcon(
-                        client.audio,
-                        Icons.volume_up_rounded,
-                        (enabled) {
-                          bind.cmSwitchPermission(
-                              connId: client.id,
-                              name: "audio",
-                              enabled: enabled);
-                          setState(() {
-                            client.audio = enabled;
-                          });
-                        },
-                        translate('Enable audio'),
-                        canModify: canModifyPermission,
-                      ),
-                      buildPermissionIcon(
-                        client.recording,
-                        Icons.videocam_rounded,
-                        (enabled) {
-                          bind.cmSwitchPermission(
-                              connId: client.id,
-                              name: "recording",
-                              enabled: enabled);
-                          setState(() {
-                            client.recording = enabled;
-                          });
-                        },
-                        translate('Enable recording session'),
-                        canModify: canModifyPermission,
-                      ),
-                    ]
-                  : [
-                      buildPermissionIcon(
-                        client.keyboard,
-                        Icons.keyboard,
-                        (enabled) {
-                          bind.cmSwitchPermission(
-                              connId: client.id,
-                              name: "keyboard",
-                              enabled: enabled);
-                          setState(() {
-                            client.keyboard = enabled;
-                          });
-                        },
-                        translate('Enable keyboard/mouse'),
-                        canModify: canModifyPermission,
-                      ),
-                      buildPermissionIcon(
-                        client.clipboard,
-                        Icons.assignment_rounded,
-                        (enabled) {
-                          bind.cmSwitchPermission(
-                              connId: client.id,
-                              name: "clipboard",
-                              enabled: enabled);
-                          setState(() {
-                            client.clipboard = enabled;
-                          });
-                        },
-                        translate('Enable clipboard'),
-                        canModify: canModifyPermission,
-                      ),
-                      buildPermissionIcon(
-                        client.audio,
-                        Icons.volume_up_rounded,
-                        (enabled) {
-                          bind.cmSwitchPermission(
-                              connId: client.id,
-                              name: "audio",
-                              enabled: enabled);
-                          setState(() {
-                            client.audio = enabled;
-                          });
-                        },
-                        translate('Enable audio'),
-                        canModify: canModifyPermission,
-                      ),
-                      buildPermissionIcon(
-                        client.file,
-                        Icons.upload_file_rounded,
-                        (enabled) {
-                          bind.cmSwitchPermission(
-                              connId: client.id,
-                              name: "file",
-                              enabled: enabled);
-                          setState(() {
-                            client.file = enabled;
-                          });
-                        },
-                        translate('Enable file copy and paste'),
-                        canModify: canModifyPermission,
-                      ),
-                      buildPermissionIcon(
-                        client.restart,
-                        Icons.restart_alt_rounded,
-                        (enabled) {
-                          bind.cmSwitchPermission(
-                              connId: client.id,
-                              name: "restart",
-                              enabled: enabled);
-                          setState(() {
-                            client.restart = enabled;
-                          });
-                        },
-                        translate('Enable remote restart'),
-                        canModify: canModifyPermission,
-                      ),
-                      buildPermissionIcon(
-                        client.recording,
-                        Icons.videocam_rounded,
-                        (enabled) {
-                          bind.cmSwitchPermission(
-                              connId: client.id,
-                              name: "recording",
-                              enabled: enabled);
-                          setState(() {
-                            client.recording = enabled;
-                          });
-                        },
-                        translate('Enable recording session'),
-                        canModify: canModifyPermission,
-                      ),
-                      // only windows support block input
-                      if (isWindows)
-                        buildPermissionIcon(
-                          client.blockInput,
-                          Icons.block,
-                          (enabled) {
-                            bind.cmSwitchPermission(
-                                connId: client.id,
-                                name: "block_input",
-                                enabled: enabled);
-                            setState(() {
-                              client.blockInput = enabled;
-                            });
-                          },
-                          translate('Enable blocking user input'),
-                          canModify: canModifyPermission,
-                        ),
-                      if (bind.mainSupportedPrivacyModeImpls() != '[]')
-                        buildPermissionIcon(
-                          client.privacyMode,
-                          Icons.visibility_off,
-                          (enabled) {
-                            bind.cmSwitchPermission(
-                                connId: client.id,
-                                name: "privacy_mode",
-                                enabled: enabled);
-                            setState(() {
-                              client.privacyMode = enabled;
-                            });
-                          },
-                          translate('Enable privacy mode'),
-                          canModify: canModifyPermission,
-                        )
-                    ],
+          Padding(
+            padding:
+                const EdgeInsets.fromLTRB(14, 12, 14, 10),
+            child: Text(
+              translate("Permissions").toUpperCase(),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1.4,
+                color: isDark
+                    ? Colors.white.withOpacity(0.55)
+                    : Colors.black.withOpacity(0.55),
+              ),
             ),
           ),
+          ...children,
+          const SizedBox(height: 4),
         ],
       ),
     );
@@ -1103,7 +1271,14 @@ class _CmControlPanel extends StatelessWidget {
               child: buildButton(
                 context,
                 color: Colors.transparent,
-                border: Border.all(color: Colors.grey),
+                // TajDesk stage 19: subtler border that matches our card
+                // borders instead of the stock grey rectangle.
+                border: Border.all(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white.withOpacity(0.20)
+                      : Colors.black.withOpacity(0.18),
+                  width: 1,
+                ),
                 onClick: handleDisconnect,
                 text: 'Cancel',
                 textColor: null,
@@ -1125,45 +1300,67 @@ class _CmControlPanel extends StatelessWidget {
       String? tooltip,
       GestureTapDownCallback? onTapDown}) {
     assert(!(onClick == null && onTapDown == null));
+    // TajDesk stage 19: more substantial premium-style buttons.
+    //   * Taller (height 38 vs 28) — comfortable click targets.
+    //   * Slightly rounder (radius 9), softer.
+    //   * Outlined (Cancel) gets a subtle hover effect via Material.
+    //   * Filled (Accept) gets w600 text, bigger.
+    //   * Internal margins increased so the button row breathes.
     Widget textWidget;
     if (icon != null) {
       textWidget = Text(
         translate(text),
-        style: TextStyle(color: textColor),
+        style: TextStyle(
+          color: textColor,
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.1,
+        ),
         textAlign: TextAlign.center,
       );
     } else {
       textWidget = Expanded(
         child: Text(
           translate(text),
-          style: TextStyle(color: textColor),
+          style: TextStyle(
+            color: textColor,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.1,
+          ),
           textAlign: TextAlign.center,
         ),
       );
     }
-    final borderRadius = BorderRadius.circular(10.0);
-    final btn = Container(
-      height: 28,
-      decoration: BoxDecoration(
-          color: color, borderRadius: borderRadius, border: border),
-      child: InkWell(
-        borderRadius: borderRadius,
-        onTap: () {
-          if (onClick == null) return;
-          checkClickTime(client.id, onClick);
-        },
-        onTapDown: (details) {
-          if (onTapDown == null) return;
-          checkClickTime(client.id, () {
-            onTapDown.call(details);
-          });
-        },
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Offstage(offstage: icon == null, child: icon).marginOnly(right: 5),
-            textWidget,
-          ],
+    final borderRadius = BorderRadius.circular(9.0);
+    final btn = Material(
+      color: color,
+      borderRadius: borderRadius,
+      child: Container(
+        height: 38,
+        decoration: BoxDecoration(
+          borderRadius: borderRadius,
+          border: border,
+        ),
+        child: InkWell(
+          borderRadius: borderRadius,
+          onTap: () {
+            if (onClick == null) return;
+            checkClickTime(client.id, onClick);
+          },
+          onTapDown: (details) {
+            if (onTapDown == null) return;
+            checkClickTime(client.id, () {
+              onTapDown.call(details);
+            });
+          },
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Offstage(offstage: icon == null, child: icon).marginOnly(right: 6),
+              textWidget,
+            ],
+          ),
         ),
       ),
     );
@@ -1173,7 +1370,7 @@ class _CmControlPanel extends StatelessWidget {
                 child: btn,
               )
             : btn)
-        .marginAll(4);
+        .marginAll(6);
   }
 
   void handleDisconnect() {

@@ -321,16 +321,21 @@ showCmWindow({bool isStartup = false}) async {
       windowManager.setOpacity(1)
     ]);
     // ensure initial window size to be changed
+    // TajDesk stage 19: open the connection-request window in the SCREEN
+    // CENTRE so the user actually notices it, instead of the original
+    // top-right corner (which on multi-monitor setups often lands on the
+    // second monitor where the user isn't looking at all).
     await windowManager.setSizeAlignment(
-        kConnectionManagerWindowSizeClosedChat, Alignment.topRight);
+        kConnectionManagerWindowSizeClosedChat, Alignment.center);
     _isCmReadyToShow = true;
   } else if (_isCmReadyToShow) {
     if (await windowManager.getOpacity() != 1) {
       await windowManager.setOpacity(1);
       await windowManager.focus();
       await windowManager.minimize(); //needed
+      // TajDesk stage 19: re-show CM window centred (was: top-right).
       await windowManager.setSizeAlignment(
-          kConnectionManagerWindowSizeClosedChat, Alignment.topRight);
+          kConnectionManagerWindowSizeClosedChat, Alignment.center);
       windowOnTop(null);
     }
   }
