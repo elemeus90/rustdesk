@@ -324,8 +324,23 @@ extension StringExtension on String {
   String get nonBreaking => replaceAll(' ', String.fromCharCode($nbsp));
 }
 
-const Size kConnectionManagerWindowSizeClosedChat = Size(300, 490);
-const Size kConnectionManagerWindowSizeOpenChat = Size(700, 490);
+// TajDesk stage 20: enlarged the connection-request window so the new
+// list-based permissions layout (stage 19) actually fits without text
+// truncation. Russian permission labels are noticeably longer than the
+// English originals — "Разрешить копирование и вставку файлов" doesn't
+// fit at 300px, switches were getting wrapped, and the column of seven
+// rows was rendering off-screen at the old 490px height.
+//
+// Closed chat: 300×490  → 400×620
+//   * +100 width buys room for the longest Russian label on one line
+//   * +130 height fits all 7 permission rows + header + accent strip
+//     + 2 buttons without scrolling
+// Open chat (extra side panel): 700×490 → 800×620
+//   * same +100 width to keep the chat-pane delta consistent (the
+//     border-width animation in server_page.dart reads the difference,
+//     so keeping it equal preserves the slide behaviour)
+const Size kConnectionManagerWindowSizeClosedChat = Size(400, 620);
+const Size kConnectionManagerWindowSizeOpenChat = Size(800, 620);
 // Tabbar transition duration, now we remove the duration
 const Duration kTabTransitionDuration = Duration.zero;
 const double kEmptyMarginTop = 50;
