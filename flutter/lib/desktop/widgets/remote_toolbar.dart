@@ -302,6 +302,16 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
   final _fractionX = 0.5.obs;
   final _dragging = false.obs;
 
+  // TajDesk stage 18: live-measured widget sizes for absolute positioning.
+  // Defaults are sensible approximations used on the very first build;
+  // they are overwritten with real measurements via _MeasureSize callbacks
+  // on the next frame. The Rx wrappers make AnimatedPositioned react to
+  // changes automatically.
+  final _measuredToolbarWidth = 700.0.obs;
+  final _measuredToolbarHeight = 50.0.obs;
+  final _measuredChipWidth = 120.0.obs;
+  final _measuredChipHeight = 32.0.obs;
+
   int get windowId => stateGlobal.windowId;
 
   void _setFullscreen(bool v) {
@@ -376,53 +386,158 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
       if (hide.value) {
         return const SizedBox.shrink();
       }
-      // TajDesk stage 12:
-      //   * TooltipTheme — overrides every Tooltip in subtree with our
-      //     graphite/rounded styling instead of Flutter's stock grey balloon.
-      //   * AnimatedSwitcher — smooth fade + size morph between the expanded
-      //     toolbar and the collapsed chip (was an instant snap before).
+      // TajDesk stage 18: pixel-accurate layout via Stack + Positioned +
+      // LayoutBuilder. Replaces the original RustDesk geometry where the
+      // chip lived inside the toolbar's Column with its own FractionalOffset
+      // (which caused the chip to "jump" between expanded and collapsed
+      // states because the two used different reference widths).
       //
-      // TajDesk stage 16: position the WHOLE assembly by _fractionX, not just
-      // the chip. When the user drags the chip while collapsed and then
-      // expands the toolbar, the toolbar now opens above the chip — instead
-      // of snapping back to the centre while the chip flies in to meet it.
-      // The two pieces no longer fly apart.
+      // Key idea: _fractionX is now interpreted as the *centre* of the chip
+      // as a fraction of the screen width (was: left edge of chip as a
+      // fraction of [0, screen - chip_w]). Both the chip and the toolbar
+      // are centred horizontally on the same pixel coordinate
+      // chipCentreX = _fractionX * screenW, then independently clamped to
+      // stay inside the screen. That way:
+      //   * Chip stays exactly where the user dropped it.
+      //   * Toolbar (when expanded) opens centred above the chip.
+      //   * Switching between expanded and collapsed never moves the chip.
       //
-      // We use FractionalOffset(_fractionX, 0) here ALWAYS (in both states).
-      // Column[panel, chip] in expanded state is positioned as a unit, and
-      // the chip alone in collapsed state is positioned by the same fraction.
-      // Centre offsets between the two states aren't perfectly identical
-      // (Column is wider than the chip, so FractionalOffset places their
-      // left edges by the same fraction of slack space, not their centres),
-      // but the drift is small around the middle of the screen and the
-      // behaviour finally matches what users intuitively expect.
-      return Align(
-        alignment: FractionalOffset(_fractionX.value, 0),
-        child: TooltipTheme(
-          data: _ToolbarTheme.tooltipTheme(),
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 220),
-            switchInCurve: Curves.easeOutCubic,
-            switchOutCurve: Curves.easeInCubic,
-            transitionBuilder: (child, animation) {
-              return FadeTransition(
-                opacity: animation,
-                child: SizeTransition(
-                  sizeFactor: animation,
-                  axisAlignment: -1.0,
-                  child: child,
+      // Widget sizes are measured at render time via _MeasureSize callbacks
+      // that store the real widths in _measuredToolbarWidth / Height /
+      // _measuredChipWidth / Height. First-frame defaults are decent
+      // approximations; the next frame uses the real values.
+      //
+      // Animation between expanded and collapsed is driven by
+      // AnimatedPositioned + AnimatedOpacity, giving a smooth slide+fade
+      // morph (preserves stage 12 🅴 behaviour).
+      return TooltipTheme(
+        data: _ToolbarTheme.tooltipTheme(),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final screenW = constraints.maxWidth.isFinite
+                ? constraints.maxWidth
+                : 1920.0;
+            return Obx(() {
+              final isExpanded = collapse.isFalse;
+              final chipW = _measuredChipWidth.value;
+              final chipH = _measuredChipHeight.value;
+              final toolbarW = _measuredToolbarWidth.value;
+              final toolbarH = _measuredToolbarHeight.value;
+
+              // Chip centre in pixels, clamped so the chip stays on-screen.
+              final rawCentre = _fractionX.value * screenW;
+              final minCentre = chipW / 2;
+              final maxCentre = (screenW - chipW / 2) > minCentre
+                  ? (screenW - chipW / 2)
+                  : minCentre;
+              final chipCentrePx = rawCentre < minCentre
+                  ? minCentre
+                  : (rawCentre > maxCentre ? maxCentre : rawCentre);
+              final chipLeft = chipCentrePx - chipW / 2;
+
+              // Toolbar centred on the same pixel, clamped to screen.
+              final desiredToolbarLeft = chipCentrePx - toolbarW / 2;
+              final maxToolbarLeft = (screenW - toolbarW) > 0
+                  ? (screenW - toolbarW)
+                  : 0.0;
+              final toolbarLeft = desiredToolbarLeft < 0
+                  ? 0.0
+                  : (desiredToolbarLeft > maxToolbarLeft
+                      ? maxToolbarLeft
+                      : desiredToolbarLeft);
+
+              // Container is wide enough for the full toolbar, tall enough
+              // for toolbar + chip. AnimatedContainer smooths height changes
+              // (so the desktop image behind isn't suddenly uncovered).
+              final containerHeight =
+                  (isExpanded ? toolbarH : 0.0) + chipH;
+
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                width: screenW,
+                height: containerHeight,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // Toolbar — always in the tree (so measurement keeps
+                    // working). Opacity controls visibility, IgnorePointer
+                    // blocks interaction when collapsed.
+                    AnimatedPositioned(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                      left: toolbarLeft,
+                      top: isExpanded ? 0 : -toolbarH,
+                      child: AnimatedOpacity(
+                        duration: const Duration(milliseconds: 220),
+                        opacity: isExpanded ? 1.0 : 0.0,
+                        child: IgnorePointer(
+                          ignoring: !isExpanded,
+                          child: _MeasureSize(
+                            onChange: (s) {
+                              if (s.width > 0 && s.height > 0) {
+                                _measuredToolbarWidth.value = s.width;
+                                _measuredToolbarHeight.value = s.height;
+                              }
+                            },
+                            child: _buildToolbarPanel(context),
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Chip — slides down when toolbar expands.
+                    AnimatedPositioned(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                      left: chipLeft,
+                      top: isExpanded ? toolbarH : 0,
+                      child: _MeasureSize(
+                        onChange: (s) {
+                          if (s.width > 0 && s.height > 0) {
+                            _measuredChipWidth.value = s.width;
+                            _measuredChipHeight.value = s.height;
+                          }
+                        },
+                        child: _buildChip(context),
+                      ),
+                    ),
+                  ],
                 ),
               );
-            },
-            child: collapse.isFalse
-                ? KeyedSubtree(
-                    key: const ValueKey('tajdesk-toolbar-expanded'),
-                    child: _buildToolbar(context),
-                  )
-                : KeyedSubtree(
-                    key: const ValueKey('tajdesk-toolbar-collapsed'),
-                    child: _buildDraggableCollapse(context),
-                  ),
+            });
+          },
+        ),
+      );
+    });
+  }
+
+  // TajDesk stage 18: chip widget without any horizontal positioning of its
+  // own — the outer Stack/Positioned in build() handles that. Just the
+  // Material + drag/show/hide buttons themselves. The auto-hide timer is
+  // still kicked here so it behaves the same as before.
+  Widget _buildChip(BuildContext context) {
+    return Obx(() {
+      if (collapse.isFalse && _dragging.isFalse) {
+        triggerAutoHide();
+      }
+      final borderRadius = BorderRadius.vertical(
+        bottom: Radius.circular(5),
+      );
+      return Offstage(
+        offstage: _dragging.isTrue,
+        child: Material(
+          elevation: _ToolbarTheme.elevation,
+          shadowColor: MyTheme.color(context).shadow,
+          borderRadius: borderRadius,
+          child: _DraggableShowHide(
+            id: widget.id,
+            sessionId: widget.ffi.sessionId,
+            dragging: _dragging,
+            fractionX: _fractionX,
+            toolbarState: widget.state,
+            setFullscreen: _setFullscreen,
+            setMinimize: _minimize,
+            borderRadius: borderRadius,
           ),
         ),
       );
@@ -437,39 +552,136 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
       final borderRadius = BorderRadius.vertical(
         bottom: Radius.circular(5),
       );
-      // TajDesk stage 16: no internal Align here anymore. The outer Align in
-      // build() positions the whole assembly (toolbar + chip when expanded,
-      // chip alone when collapsed) by _fractionX. Removing this inner
-      // FractionalOffset wrapper means the chip's horizontal position is
-      // driven from a single source of truth — the outer Align — instead of
-      // double-positioning that used to make them drift apart.
-      //
-      // We keep the dragEnabled gate from stage 15: drag works only while
-      // collapsed. In the expanded state the chip is glued to the bottom of
-      // the toolbar through the Column's cross-axis centring, and dragging
-      // would desync it from the toolbar above (their widths differ, so the
-      // existing chip-width-based drag maths can't move the toolbar by the
-      // same pixel delta).
-      return Offstage(
-        offstage: _dragging.isTrue,
-        child: Material(
-          elevation: _ToolbarTheme.elevation,
-          shadowColor: MyTheme.color(context).shadow,
-          borderRadius: borderRadius,
-          child: _DraggableShowHide(
-            id: widget.id,
-            sessionId: widget.ffi.sessionId,
-            dragging: _dragging,
-            fractionX: _fractionX,
-            dragEnabled: collapse.isTrue,
-            toolbarState: widget.state,
-            setFullscreen: _setFullscreen,
-            setMinimize: _minimize,
+      // TajDesk stage 17: restored to the original RustDesk behaviour —
+      // the chip is always positioned by FractionalOffset(_fractionX, 0)
+      // within its parent. In the expanded state that parent is the inner
+      // glass-panel Column (so the chip can move within the toolbar's
+      // width); in the collapsed state it's the full screen via the outer
+      // Align. Yes, this means the chip can drift away from the toolbar
+      // for non-centre _fractionX values, but at least the drag works
+      // reliably and nothing snaps to corners.
+      return Align(
+        alignment: FractionalOffset(_fractionX.value, 0),
+        child: Offstage(
+          offstage: _dragging.isTrue,
+          child: Material(
+            elevation: _ToolbarTheme.elevation,
+            shadowColor: MyTheme.color(context).shadow,
             borderRadius: borderRadius,
+            child: _DraggableShowHide(
+              id: widget.id,
+              sessionId: widget.ffi.sessionId,
+              dragging: _dragging,
+              fractionX: _fractionX,
+              toolbarState: widget.state,
+              setFullscreen: _setFullscreen,
+              setMinimize: _minimize,
+              borderRadius: borderRadius,
+            ),
           ),
         ),
       );
     });
+  }
+
+  // TajDesk stage 18: just the frosted-glass panel with buttons — no chip
+  // attached below, no Column wrapper. The chip is rendered separately in
+  // build() via Stack/Positioned. This is what we actually want to measure
+  // and position as a unit. Logic for grouping buttons and inserting
+  // dividers is identical to _buildToolbar (kept around as legacy for
+  // safety, no longer called from build()).
+  Widget _buildToolbarPanel(BuildContext context) {
+    final List<List<Widget>> groups = [];
+
+    final g1 = <Widget>[];
+    g1.add(_PinMenu(state: widget.state));
+    if (!isWebDesktop) {
+      g1.add(_MobileActionMenu(ffi: widget.ffi));
+    }
+    groups.add(g1);
+
+    final g2 = <Widget>[];
+    g2.add(Obx(() {
+      if ((PrivacyModeState.find(widget.id).isEmpty ||
+              allowDisplaySwitchInPrivacyMode(pi)) &&
+          pi.displaysCount.value > 1) {
+        return _MonitorMenu(
+            id: widget.id,
+            ffi: widget.ffi,
+            setRemoteState: widget.setRemoteState);
+      } else {
+        return Offstage();
+      }
+    }));
+    g2.add(_ControlMenu(id: widget.id, ffi: widget.ffi, state: widget.state));
+    groups.add(g2);
+
+    final g3 = <Widget>[];
+    g3.add(_DisplayMenu(
+      id: widget.id,
+      ffi: widget.ffi,
+      state: widget.state,
+      setFullscreen: _setFullscreen,
+    ));
+    if (widget.ffi.connType == ConnType.defaultConn) {
+      g3.add(_KeyboardMenu(id: widget.id, ffi: widget.ffi));
+    }
+    groups.add(g3);
+
+    final g4 = <Widget>[];
+    g4.add(_ChatMenu(id: widget.id, ffi: widget.ffi));
+    if (!isWeb) {
+      g4.add(_VoiceCallMenu(id: widget.id, ffi: widget.ffi));
+    }
+    groups.add(g4);
+
+    if (!isWeb) groups.add([_RecordMenu()]);
+    groups.add([_CloseMenu(id: widget.id, ffi: widget.ffi)]);
+
+    final List<Widget> rowChildren = [];
+    rowChildren.add(SizedBox(width: _ToolbarTheme.buttonHMargin * 2));
+    bool firstGroup = true;
+    for (final group in groups) {
+      if (group.isEmpty) continue;
+      if (!firstGroup) {
+        rowChildren.add(_ToolbarTheme.groupDivider());
+      }
+      rowChildren.addAll(group);
+      firstGroup = false;
+    }
+    rowChildren.add(SizedBox(width: _ToolbarTheme.buttonHMargin * 2));
+
+    final toolbarBorderRadius = BorderRadius.all(Radius.circular(12.0));
+    return ClipRRect(
+      borderRadius: toolbarBorderRadius,
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Material(
+          elevation: _ToolbarTheme.elevation,
+          shadowColor: Colors.black.withOpacity(0.4),
+          borderRadius: toolbarBorderRadius,
+          color: Colors.black.withOpacity(0.32),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Theme(
+              data: themeData(),
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.08),
+                    width: 1,
+                  ),
+                  borderRadius: toolbarBorderRadius,
+                ),
+                child: Row(
+                  children: rowChildren,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildToolbar(BuildContext context) {
@@ -2763,10 +2975,6 @@ class _DraggableShowHide extends StatefulWidget {
   final RxBool dragging;
   final ToolbarState toolbarState;
   final BorderRadius borderRadius;
-  // TajDesk stage 15: when false, the drag handle becomes a static dim icon —
-  // tapping/dragging it does nothing. Used while the toolbar is expanded to
-  // prevent the chip from drifting away from the toolbar.
-  final bool dragEnabled;
 
   final Function(bool) setFullscreen;
   final Function() setMinimize;
@@ -2781,7 +2989,6 @@ class _DraggableShowHide extends StatefulWidget {
     required this.setFullscreen,
     required this.setMinimize,
     required this.borderRadius,
-    this.dragEnabled = true,
   }) : super(key: key);
 
   @override
@@ -2826,19 +3033,6 @@ class _DraggableShowHideState extends State<_DraggableShowHide> {
     // same 2×3 dot grid (familiar pattern from Notion / Linear) but force
     // a white tint with a clearly readable opacity, plus a touch of left
     // padding so it doesn't kiss the chip border.
-    //
-    // TajDesk stage 15: when drag is disabled (toolbar expanded), render the
-    // glyph as a static, dimmer icon to signal "not interactive here".
-    if (!widget.dragEnabled) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 2),
-        child: Icon(
-          Icons.drag_indicator,
-          size: 18,
-          color: Colors.white.withOpacity(0.22),
-        ),
-      );
-    }
     return Draggable(
       axis: Axis.horizontal,
       child: Padding(
@@ -2860,15 +3054,33 @@ class _DraggableShowHideState extends State<_DraggableShowHide> {
         widget.dragging.value = true;
       }),
       onDragEnd: (details) {
+        // TajDesk stage 18: new _fractionX semantics — it now represents the
+        // chip's centre as a fraction of the screen width (was: chip left
+        // edge as a fraction of [0, screen - chip_w]). So the delta scales
+        // by screenW directly, not by (screenW - chipW).
+        //
+        // Movement: pointer (and feedback) moved by `delta_x` pixels.
+        // chip centre also moves by `delta_x` pixels → fraction moves by
+        // delta_x / screenW.
+        //
+        // After updating, clamp so the chip's centre stays at least chipW/2
+        // away from each screen edge — i.e., the whole chip stays visible.
+        // The legacy `left` / `right` bounds from
+        // kOptionRemoteMenubarDragLeft/Right are ignored here; the
+        // on-screen clamp is enough and is always correct regardless of
+        // user-set values.
         final mediaSize = MediaQueryData.fromView(View.of(context)).size;
-        widget.fractionX.value +=
-            (details.offset.dx - position.dx) / (mediaSize.width - size.width);
-        if (widget.fractionX.value < left) {
-          widget.fractionX.value = left;
-        }
-        if (widget.fractionX.value > right) {
-          widget.fractionX.value = right;
-        }
+        final screenW = mediaSize.width;
+        final chipW = size.width > 0 ? size.width : 120.0;
+        final deltaX = details.offset.dx - position.dx;
+
+        var newFraction = widget.fractionX.value + deltaX / screenW;
+        final minF = (chipW / 2) / screenW;
+        final maxF = 1.0 - minF;
+        if (newFraction < minF) newFraction = minF;
+        if (newFraction > maxF) newFraction = maxF;
+        widget.fractionX.value = newFraction;
+
         bind.sessionPeerOption(
           sessionId: widget.sessionId,
           name: 'remote-menubar-drag-x',
@@ -3073,5 +3285,67 @@ class EdgeThicknessControl extends StatelessWidget {
     );
 
     return slider;
+  }
+}
+
+// TajDesk stage 18: tiny helper that reports the measured size of its
+// child after every frame. Used by _RemoteToolbarState to track the real
+// rendered widths of the toolbar panel and the chip, so the Stack +
+// Positioned layout can centre them on the same pixel coordinate.
+//
+// Renders via SizedBox (no visual wrapping — SizedBox without explicit
+// width/height just shrink-wraps to its child). A GlobalKey gives access
+// to the rendered RenderBox in a post-frame callback. The callback is
+// re-registered on every build so size changes from subsequent rebuilds
+// are picked up too.
+class _MeasureSize extends StatefulWidget {
+  final Widget child;
+  final ValueChanged<Size> onChange;
+
+  const _MeasureSize({
+    Key? key,
+    required this.child,
+    required this.onChange,
+  }) : super(key: key);
+
+  @override
+  State<_MeasureSize> createState() => _MeasureSizeState();
+}
+
+class _MeasureSizeState extends State<_MeasureSize> {
+  final GlobalKey _key = GlobalKey();
+  Size? _previousSize;
+
+  void _schedulePostFrame() {
+    WidgetsBinding.instance.addPostFrameCallback(_postFrame);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _schedulePostFrame();
+  }
+
+  @override
+  void didUpdateWidget(_MeasureSize oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _schedulePostFrame();
+  }
+
+  void _postFrame(Duration _) {
+    if (!mounted) return;
+    final ctx = _key.currentContext;
+    if (ctx == null) return;
+    final size = ctx.size;
+    if (size == null || size.isEmpty) return;
+    if (size != _previousSize) {
+      _previousSize = size;
+      widget.onChange(size);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(key: _key, child: widget.child);
   }
 }
