@@ -456,7 +456,7 @@ class _GeneralState extends State<_General> {
       children: [
         if (!isWeb) service(),
         theme(),
-        _Card(title: 'Language', children: [language()]),
+        _Card(title: 'Language', icon: Icons.language, children: [language()]),
         if (!isWeb) hwcodec(),
         if (!isWeb) audio(context),
         if (!isWeb) record(context),
@@ -474,7 +474,7 @@ class _GeneralState extends State<_General> {
     }
 
     final isOptFixed = isOptionFixed(kCommConfKeyTheme);
-    return _Card(title: 'Theme', children: [
+    return _Card(title: 'Theme', icon: Icons.brightness_6_outlined, children: [
       _Radio<String>(context,
           value: 'light',
           groupValue: current,
@@ -506,7 +506,7 @@ class _GeneralState extends State<_General> {
         return const Offstage();
       }
 
-      return _Card(title: 'Service', children: [
+      return _Card(title: 'Service', icon: Icons.dns_outlined, children: [
         _Button(serviceStop.value ? 'Start' : 'Stop', () {
           () async {
             serviceBtnEnabled.value = false;
@@ -635,7 +635,7 @@ class _GeneralState extends State<_General> {
         },
       ));
     }
-    return _Card(title: 'Other', children: children);
+    return _Card(title: 'Other', icon: Icons.tune, children: children);
   }
 
   Widget wallpaper() {
@@ -682,7 +682,7 @@ class _GeneralState extends State<_General> {
     final vram = bind.mainHasVram();
     return Offstage(
       offstage: !(hwcodec || vram),
-      child: _Card(title: 'Hardware Codec', children: [
+      child: _Card(title: 'Hardware Codec', icon: Icons.memory, children: [
         _OptionCheckBox(
           context,
           'Enable hardware codec',
@@ -712,7 +712,10 @@ class _GeneralState extends State<_General> {
           setState(() {});
         },
       ).marginOnly(left: _kContentHMargin);
-      return _Card(title: 'Audio Input Device', children: [child]);
+      return _Card(
+          title: 'Audio Input Device',
+          icon: Icons.volume_up_outlined,
+          children: [child]);
     }
 
     return AudioInput(builder: builder, isCm: false, isVoiceCall: false);
@@ -739,7 +742,11 @@ class _GeneralState extends State<_General> {
       String root_dir = map['root_dir']!;
       bool root_dir_exists = map['root_dir_exists']!;
       bool user_dir_exists = map['user_dir_exists']!;
-      return _Card(title: 'Recording', children: [
+      return _Card(
+          title: 'Recording',
+          icon: Icons.videocam_outlined,
+          dividers: true,
+          children: [
         if (!bind.isOutgoingOnly())
           _OptionCheckBox(context, 'Automatically record incoming sessions',
               kOptionAllowAutoRecordIncoming),
@@ -2516,59 +2523,94 @@ class _AboutState extends State<_About> {
 Widget _Card(
     {required String title,
     required List<Widget> children,
-    List<Widget>? title_suffix}) {
-  // TajDesk: redesigned section — small uppercase header, soft border,
-  // no Material card chrome. Reads like a modern SaaS settings page.
+    List<Widget>? title_suffix,
+    IconData? icon,
+    bool dividers = false}) {
+  // TajDesk stage 23 (variant A): centred section column instead of the
+  // left-pinned card that left a large empty gutter on wide windows. Optional
+  // leading icon tile in the header (Material icons) and optional thin
+  // dividers between option rows give the page a modern SaaS / Linear feel and
+  // remove the last of the stock-RustDesk look. Section title is now sentence
+  // case rather than a shouty all-caps line.
   return Builder(builder: (context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final borderColor = MyTheme.accent.withOpacity(0.12);
     final headerColor =
-        Theme.of(context).textTheme.titleLarge?.color?.withOpacity(0.55);
-    return Row(
-      children: [
-        Flexible(
-          child: SizedBox(
-            width: _kCardFixedWidth,
-            child: Container(
-              margin: const EdgeInsets.only(left: _kCardLeftMargin, top: 15),
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: borderColor, width: 1),
-              ),
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                        _kContentHMargin, 12, _kContentHMargin, 6),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            translate(title).toUpperCase(),
-                            textAlign: TextAlign.start,
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.2,
-                              color: headerColor,
-                            ),
-                          ),
+        Theme.of(context).textTheme.titleLarge?.color?.withOpacity(0.75);
+    final dividerColor = isDark
+        ? Colors.white.withOpacity(0.06)
+        : Colors.black.withOpacity(0.06);
+
+    // Interleave thin dividers between option rows when requested.
+    final List<Widget> body = [];
+    final mapped = children
+        .map((e) => e.marginOnly(top: 4, right: _kContentHMargin))
+        .toList();
+    for (int i = 0; i < mapped.length; i++) {
+      if (dividers && i > 0) {
+        body.add(Container(
+          height: 1,
+          margin: const EdgeInsets.fromLTRB(_kContentHMargin, 8, 0, 4),
+          color: dividerColor,
+        ));
+      }
+      body.add(mapped[i]);
+    }
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: _kCardFixedWidth),
+        child: Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(top: 15),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: borderColor, width: 1),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    _kContentHMargin, 12, _kContentHMargin, 6),
+                child: Row(
+                  children: [
+                    if (icon != null)
+                      Container(
+                        width: 26,
+                        height: 26,
+                        margin: const EdgeInsets.only(right: 10),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: MyTheme.accent.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(7),
                         ),
-                        ...?title_suffix
-                      ],
+                        child: Icon(icon, size: 16, color: MyTheme.accent),
+                      ),
+                    Expanded(
+                      child: Text(
+                        translate(title),
+                        textAlign: TextAlign.start,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.1,
+                          color: headerColor,
+                        ),
+                      ),
                     ),
-                  ),
-                  ...children
-                      .map((e) => e.marginOnly(top: 4, right: _kContentHMargin)),
-                  const SizedBox(height: 6),
-                ],
+                    ...?title_suffix
+                  ],
+                ),
               ),
-            ),
+              ...body,
+              const SizedBox(height: 6),
+            ],
           ),
         ),
-      ],
+      ),
     );
   });
 }
@@ -2619,23 +2661,52 @@ Widget _OptionCheckBox(
 
   return GestureDetector(
     child: Obx(
-      () => Row(
-        children: [
-          Checkbox(
-                  value: ref.value,
-                  onChanged: enabled && !isOptFixed ? onChanged : null)
-              .marginOnly(right: 5),
-          Offstage(
-            offstage: !ref.value || checkedIcon == null,
-            child: checkedIcon?.marginOnly(right: 5),
-          ),
-          Expanded(
-              child: Text(
-            translate(label),
-            style: TextStyle(color: disabledTextColor(context, enabled)),
-          ))
-        ],
-      ),
+      () {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final active = enabled && !isOptFixed;
+        return Row(
+          children: [
+            // TajDesk stage 23: rounded accent checkbox instead of the stock
+            // square Material checkbox.
+            Container(
+              width: 18,
+              height: 18,
+              margin: const EdgeInsets.only(right: 8),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: ref.value
+                    ? (active
+                        ? MyTheme.accent
+                        : MyTheme.accent.withOpacity(0.5))
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(5),
+                border: ref.value
+                    ? null
+                    : Border.all(
+                        color: active
+                            ? (isDark
+                                ? Colors.white.withOpacity(0.45)
+                                : Colors.black.withOpacity(0.35))
+                            : Colors.grey.withOpacity(0.4),
+                        width: 1.5,
+                      ),
+              ),
+              child: ref.value
+                  ? const Icon(Icons.check, size: 13, color: Colors.white)
+                  : null,
+            ),
+            Offstage(
+              offstage: !ref.value || checkedIcon == null,
+              child: checkedIcon?.marginOnly(right: 5),
+            ),
+            Expanded(
+                child: Text(
+              translate(label),
+              style: TextStyle(color: disabledTextColor(context, enabled)),
+            ))
+          ],
+        );
+      },
     ).marginOnly(left: _kCheckBoxLeftMargin),
     onTap: enabled && !isOptFixed
         ? () {
