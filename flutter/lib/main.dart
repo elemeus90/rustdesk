@@ -302,7 +302,16 @@ void runConnectionManagerScreen() async {
   } else {
     await showCmWindow(isStartup: true);
   }
-  setResizable(false);
+  // TajDesk stage 21: the connection-request window used to be locked
+  // (`setResizable(false)`), which meant that on narrow layouts with the
+  // Russian permission labels the Accept / Reject buttons fell below the
+  // bottom edge and the request could not be acted on at all. We now allow
+  // the window to be resized and set a sensible minimum so the sticky button
+  // bar always stays reachable while the permission list scrolls.
+  setResizable(true);
+  try {
+    await windowManager.setMinimumSize(const Size(360, 480));
+  } catch (_) {}
   // Start the uni links handler and redirect links to Native, not for Flutter.
   listenUniLinks(handleByFlutter: false);
 }

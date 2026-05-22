@@ -347,27 +347,69 @@ class ConnectionManagerState extends State<ConnectionManager>
 
 Widget buildConnectionCard(Client client) {
   return Consumer<ServerModel>(
-    builder: (context, value, child) => Column(
-      mainAxisAlignment: MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      key: ValueKey(client.id),
-      children: [
-        _CmHeader(client: client),
-        client.type_() == ClientType.file ||
-                client.type_() == ClientType.portForward ||
-                client.type_() == ClientType.terminal ||
-                client.disconnected
-            ? Offstage()
-            : _PrivilegeBoard(client: client),
-        Expanded(
-          child: Align(
-            alignment: Alignment.bottomCenter,
-            child: _CmControlPanel(client: client),
-          ),
-        )
-      ],
-    ).paddingSymmetric(vertical: 4.0, horizontal: 8.0),
+    builder: (context, value, child) {
+      // TajDesk stage 21: three-zone layout so the request stays usable in a
+      // small window:
+      //   1. header  — pinned at the top, never scrolls
+      //   2. permissions — the only flexible zone; scrolls when it doesn't fit
+      //   3. control bar — pinned at the bottom (sticky), so Accept / Reject
+      //      are ALWAYS reachable regardless of how many permission rows there
+      //      are or how short the window is.
+      final showPrivilege = !(client.type_() == ClientType.file ||
+          client.type_() == ClientType.portForward ||
+          client.type_() == ClientType.terminal ||
+          client.disconnected);
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        key: ValueKey(client.id),
+        children: [
+          _CmHeader(client: client),
+          // Flexible middle zone. When there are permissions we let them
+          // scroll inside the remaining space; otherwise an empty Spacer keeps
+          // the control bar pinned to the bottom.
+          if (showPrivilege)
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const ClampingScrollPhysics(),
+                child: _PrivilegeBoard(client: client),
+              ),
+            )
+          else
+            const Spacer(),
+          // Sticky bottom control bar.
+          _CmStickyBar(child: _CmControlPanel(client: client)),
+        ],
+      ).paddingSymmetric(vertical: 4.0, horizontal: 8.0);
+    },
   );
+}
+
+// TajDesk stage 21: thin wrapper that pins the control buttons to the bottom
+// of the window with a soft top hairline + shadow, so the scrolling permission
+// list visually slides *under* it rather than colliding with the buttons.
+class _CmStickyBar extends StatelessWidget {
+  final Widget child;
+  const _CmStickyBar({Key? key, required this.child}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: isDark
+                ? Colors.white.withOpacity(0.06)
+                : Colors.black.withOpacity(0.06),
+            width: 1,
+          ),
+        ),
+      ),
+      padding: const EdgeInsets.only(top: 6),
+      child: child,
+    );
+  }
 }
 
 class _AppIcon extends StatelessWidget {
@@ -478,8 +520,10 @@ class _CmHeaderState extends State<_CmHeader>
           ),
         ],
       ),
-      margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
-      padding: const EdgeInsets.fromLTRB(14, 12, 10, 14),
+      // TajDesk stage 21: tighter margins/padding to reclaim vertical space
+      // for the permission list in a small window.
+      margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+      padding: const EdgeInsets.fromLTRB(14, 10, 10, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
@@ -487,7 +531,7 @@ class _CmHeaderState extends State<_CmHeader>
           // Thin accent highlight strip at the top — only colour intrusion.
           Container(
             height: 2,
-            margin: const EdgeInsets.only(bottom: 12),
+            margin: const EdgeInsets.only(bottom: 10),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
@@ -502,7 +546,7 @@ class _CmHeaderState extends State<_CmHeader>
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildClientAvatar().marginOnly(right: 14.0),
+              _buildClientAvatar().marginOnly(right: 12.0),
               Expanded(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.start,
@@ -514,7 +558,7 @@ class _CmHeaderState extends State<_CmHeader>
                       style: TextStyle(
                         color: primaryText,
                         fontWeight: FontWeight.w700,
-                        fontSize: 19,
+                        fontSize: 17,
                         letterSpacing: -0.2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -560,7 +604,7 @@ class _CmHeaderState extends State<_CmHeader>
                           style: TextStyle(color: secondaryText, fontSize: 12),
                         ),
                       ),
-                    const SizedBox(height: 10.0),
+                    const SizedBox(height: 8.0),
                     FittedBox(
                         child: Row(
                       children: [
@@ -643,11 +687,10 @@ class _CmHeaderState extends State<_CmHeader>
   Widget _buildClientAvatar() {
     return buildAvatarWidget(
           avatar: client.avatar,
-          // TajDesk stage 19: avatar shrunk from 70 to 56 to match the
-          // calmer card proportions; corner radius reduced for the same
-          // reason.
-          size: 56,
-          borderRadius: 12,
+          // TajDesk stage 21: avatar shrunk from 56 to 44 to give the
+          // permission list more vertical room in a small window.
+          size: 44,
+          borderRadius: 11,
           fallback: _buildInitialAvatar(),
         ) ??
         _buildInitialAvatar();
@@ -661,8 +704,8 @@ class _CmHeaderState extends State<_CmHeader>
     // (was: blaring 55px bold initial in a saturated solid block).
     final base = str2color(client.name);
     return Container(
-      width: 56,
-      height: 56,
+      width: 44,
+      height: 44,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -676,7 +719,7 @@ class _CmHeaderState extends State<_CmHeader>
                 .toColor(),
           ],
         ),
-        borderRadius: BorderRadius.circular(12.0),
+        borderRadius: BorderRadius.circular(11.0),
         border: Border.all(
           color: Colors.white.withOpacity(0.12),
           width: 1,
@@ -694,7 +737,7 @@ class _CmHeaderState extends State<_CmHeader>
         style: const TextStyle(
           fontWeight: FontWeight.w600,
           color: Colors.white,
-          fontSize: 28,
+          fontSize: 22,
           letterSpacing: -0.5,
         ),
       ),
@@ -783,18 +826,19 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
           ? () => checkClickTime(widget.client.id, () => onTap?.call(!enabled))
           : null,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        // TajDesk stage 21: vertical padding 9 -> 6 to pack more rows in.
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         child: Row(
           children: [
             Container(
-              width: 32,
-              height: 32,
+              width: 28,
+              height: 28,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: iconBg,
                 shape: BoxShape.circle,
               ),
-              child: Icon(iconData, size: 18, color: iconColor),
+              child: Icon(iconData, size: 16, color: iconColor),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -809,7 +853,7 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
             ),
             // Compact platform-style toggle.
             Transform.scale(
-              scale: 0.85,
+              scale: 0.78,
               child: Switch(
                 value: enabled,
                 onChanged: canModify
@@ -960,7 +1004,7 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
       if (i > 0) {
         children.add(Container(
           height: 1,
-          margin: const EdgeInsets.only(left: 56, right: 12),
+          margin: const EdgeInsets.only(left: 52, right: 12),
           color: isDark
               ? Colors.white.withOpacity(0.05)
               : Colors.black.withOpacity(0.05),
@@ -995,7 +1039,7 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
         children: [
           Padding(
             padding:
-                const EdgeInsets.fromLTRB(14, 12, 14, 10),
+                const EdgeInsets.fromLTRB(14, 10, 14, 8),
             child: Text(
               translate("Permissions").toUpperCase(),
               style: TextStyle(
