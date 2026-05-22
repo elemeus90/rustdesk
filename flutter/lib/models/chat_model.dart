@@ -298,8 +298,11 @@ class ChatModel with ChangeNotifier {
       _isShowCMSidePage = !_isShowCMSidePage;
       notifyListeners();
       await windowManager.show();
+      // TajDesk stage 22: clamp height to screen working area.
       await windowManager.setSizeAlignment(
-          kConnectionManagerWindowSizeClosedChat, Alignment.topRight);
+          await cmFitWindowSizeToScreen(
+              kConnectionManagerWindowSizeClosedChat),
+          Alignment.topRight);
     } else {
       final currentSelectedTab =
           gFFI.serverModel.tabController.state.value.selectedTabInfo;
@@ -310,8 +313,10 @@ class ChatModel with ChangeNotifier {
       }
       requestChatInputFocus();
       await windowManager.show();
+      // TajDesk stage 22: clamp height to screen working area.
       await windowManager.setSizeAlignment(
-          kConnectionManagerWindowSizeOpenChat, Alignment.topRight);
+          await cmFitWindowSizeToScreen(kConnectionManagerWindowSizeOpenChat),
+          Alignment.topRight);
       _isShowCMSidePage = !_isShowCMSidePage;
       notifyListeners();
     }

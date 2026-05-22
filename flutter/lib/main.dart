@@ -334,8 +334,10 @@ showCmWindow({bool isStartup = false}) async {
     // CENTRE so the user actually notices it, instead of the original
     // top-right corner (which on multi-monitor setups often lands on the
     // second monitor where the user isn't looking at all).
+    // TajDesk stage 22: height clamped to the screen's working area.
     await windowManager.setSizeAlignment(
-        kConnectionManagerWindowSizeClosedChat, Alignment.center);
+        await cmFitWindowSizeToScreen(kConnectionManagerWindowSizeClosedChat),
+        Alignment.center);
     _isCmReadyToShow = true;
   } else if (_isCmReadyToShow) {
     if (await windowManager.getOpacity() != 1) {
@@ -343,8 +345,10 @@ showCmWindow({bool isStartup = false}) async {
       await windowManager.focus();
       await windowManager.minimize(); //needed
       // TajDesk stage 19: re-show CM window centred (was: top-right).
+      // TajDesk stage 22: height clamped to the screen's working area.
       await windowManager.setSizeAlignment(
-          kConnectionManagerWindowSizeClosedChat, Alignment.center);
+          await cmFitWindowSizeToScreen(kConnectionManagerWindowSizeClosedChat),
+          Alignment.center);
       windowOnTop(null);
     }
   }

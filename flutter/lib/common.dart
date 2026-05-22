@@ -3881,6 +3881,44 @@ setResizable(bool resizable) {
   }
 }
 
+// TajDesk stage 22: clamp the connection-request (CM) window's height to the
+// screen's working area, so it never opens partially off-screen on small
+// laptop displays (e.g. 1280×720, where the usable height after the Windows
+// taskbar is ~672px and the desired 690px window would clip the buttons).
+//
+// `visibleFrame` from window_size is in PHYSICAL pixels while window_manager
+// sizes in LOGICAL pixels, so we divide by scaleFactor. On the typical old
+// laptop scaleFactor == 1.0 (no-op); on hi-dpi screens the working area is
+// large enough that the clamp never triggers anyway. We keep a small margin
+// below the working area and never go under the resizable minimum (480).
+Future<Size> cmFitWindowSizeToScreen(Size base) async {
+  try {
+    if (isDesktop || isWebDesktop) {
+      final screens = await window_size.getScreenList();
+      if (screens.isNotEmpty) {
+        // Use the largest working-area height available; for the
+        // single-monitor laptops this targets, that is simply that one screen.
+        double maxAvail = 0;
+        for (final s in screens) {
+          final scale = s.scaleFactor <= 0 ? 1.0 : s.scaleFactor;
+          final availH = s.visibleFrame.height / scale;
+          if (availH > maxAvail) maxAvail = availH;
+        }
+        if (maxAvail > 0) {
+          const margin = 24.0; // breathing room below the working area
+          const minH = 480.0; // matches the resizable minimum
+          var h = base.height;
+          final cap = maxAvail - margin;
+          if (h > cap) h = cap;
+          if (h < minH) h = minH;
+          return Size(base.width, h);
+        }
+      }
+    }
+  } catch (_) {}
+  return base;
+}
+
 isOptionFixed(String key) => bind.mainIsOptionFixed(key: key);
 
 bool isChangePermanentPasswordDisabled() =>
