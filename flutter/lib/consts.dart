@@ -339,8 +339,14 @@ extension StringExtension on String {
 //   * same +100 width to keep the chat-pane delta consistent (the
 //     border-width animation in server_page.dart reads the difference,
 //     so keeping it equal preserves the slide behaviour)
-const Size kConnectionManagerWindowSizeClosedChat = Size(400, 620);
-const Size kConnectionManagerWindowSizeOpenChat = Size(800, 620);
+//
+// TajDesk stage 22: height 620 → 690 (+70). After stage 21 made the window
+// scrollable, the 9th row "Использовать режим конфиденциальности"
+// (privacy mode, Windows-only) still sat just below the fold and forced a
+// scroll. +70 lets all 9 compact rows + header + sticky buttons show without
+// scrolling; the stage-21 scroll remains as a safety net for any extra rows.
+const Size kConnectionManagerWindowSizeClosedChat = Size(400, 690);
+const Size kConnectionManagerWindowSizeOpenChat = Size(800, 690);
 // Tabbar transition duration, now we remove the duration
 const Duration kTabTransitionDuration = Duration.zero;
 const double kEmptyMarginTop = 50;
