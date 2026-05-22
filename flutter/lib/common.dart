@@ -274,24 +274,41 @@ class MyTheme {
   );
 
   static SwitchThemeData switchTheme() {
+    // TajDesk stage 24: brand-accent switch (was stock Material blue, which
+    // read as generic Flutter). Thumb + track pick up the accent when on.
     return SwitchThemeData(
-        splashRadius: (isDesktop || isWebDesktop) ? 0 : kRadialReactionRadius);
+      splashRadius: (isDesktop || isWebDesktop) ? 0 : kRadialReactionRadius,
+      thumbColor: MaterialStateProperty.resolveWith((states) =>
+          states.contains(MaterialState.selected) ? accent : null),
+      trackColor: MaterialStateProperty.resolveWith((states) =>
+          states.contains(MaterialState.selected)
+              ? accent.withOpacity(0.4)
+              : null),
+    );
   }
 
   static RadioThemeData radioTheme() {
+    // TajDesk stage 24: accent fill for the selected radio.
     return RadioThemeData(
-        splashRadius: (isDesktop || isWebDesktop) ? 0 : kRadialReactionRadius);
+      splashRadius: (isDesktop || isWebDesktop) ? 0 : kRadialReactionRadius,
+      fillColor: MaterialStateProperty.resolveWith((states) =>
+          states.contains(MaterialState.selected) ? accent : null),
+    );
   }
 
   // Checkbox
-  static const CheckboxThemeData checkboxTheme = CheckboxThemeData(
-    splashRadius: 0,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.all(
-        Radius.circular(5),
-      ),
-    ),
-  );
+  // TajDesk stage 24: accent fill + white check (was colorScheme blue).
+  static CheckboxThemeData checkboxTheme() => CheckboxThemeData(
+        splashRadius: 0,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(
+            Radius.circular(5),
+          ),
+        ),
+        fillColor: MaterialStateProperty.resolveWith((states) =>
+            states.contains(MaterialState.selected) ? accent : null),
+        checkColor: MaterialStateProperty.all(Colors.white),
+      );
 
   // TextButton
   // Value is used to calculate "dialog.actionsPadding"
@@ -449,13 +466,13 @@ class MyTheme {
     ),
     switchTheme: switchTheme(),
     radioTheme: radioTheme(),
-    checkboxTheme: checkboxTheme,
+    checkboxTheme: checkboxTheme(),
     listTileTheme: listTileTheme,
     menuBarTheme: MenuBarThemeData(
         style:
             MenuStyle(backgroundColor: MaterialStatePropertyAll(Colors.white))),
     colorScheme: ColorScheme.light(
-        primary: Colors.blue, secondary: accent, background: grayBg),
+        primary: accent, secondary: accent, background: grayBg),
     popupMenuTheme: PopupMenuThemeData(
         color: Colors.white,
         shape: RoundedRectangleBorder(
@@ -557,13 +574,13 @@ class MyTheme {
     ),
     switchTheme: switchTheme(),
     radioTheme: radioTheme(),
-    checkboxTheme: checkboxTheme,
+    checkboxTheme: checkboxTheme(),
     listTileTheme: listTileTheme,
     menuBarTheme: MenuBarThemeData(
         style: MenuStyle(
             backgroundColor: MaterialStatePropertyAll(Color(0xFF121212)))),
     colorScheme: ColorScheme.dark(
-      primary: Colors.blue,
+      primary: accent,
       secondary: accent,
       background: Color(0xFF1E293B),
     ),
@@ -3636,30 +3653,50 @@ class ComboBox extends StatelessWidget {
     }
     var ref = values[index].obs;
     current = keys[index];
+    // TajDesk stage 24: restyled dropdown — soft filled field, brand chevron
+    // in a tinted chip, rounded menu surface. The stock DropdownButton was the
+    // single most recognisable "generic Flutter / RustDesk" control.
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final fillColor = isDark ? const Color(0xFF1E293B) : MyTheme.grayBg;
+    final borderColor = enabled
+        ? (isDark
+            ? Colors.white.withOpacity(0.10)
+            : Colors.black.withOpacity(0.10))
+        : MyTheme.border;
+    final menuColor = isDark ? const Color(0xFF1E2230) : Colors.white;
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(
-          color: enabled
-              ? MyTheme.color(context).border2 ?? MyTheme.border
-              : MyTheme.border,
-        ),
-        borderRadius:
-            BorderRadius.circular(8), //border raiuds of dropdown button
+        color: fillColor,
+        border: Border.all(color: borderColor),
+        borderRadius: BorderRadius.circular(9),
       ),
       height: 42, // should be the height of a TextField
       child: Obx(() => DropdownButton<String>(
             isExpanded: true,
             value: ref.value,
-            elevation: 16,
+            elevation: 4,
+            borderRadius: BorderRadius.circular(10),
+            dropdownColor: menuColor,
+            focusColor: Colors.transparent,
             underline: Container(),
             style: TextStyle(
+                fontSize: 14,
                 color: enabled
                     ? Theme.of(context).textTheme.titleMedium?.color
                     : disabledTextColor(context, enabled)),
-            icon: const Icon(
-              Icons.expand_more_sharp,
-              size: 20,
-            ).marginOnly(right: 15),
+            icon: Container(
+              margin: const EdgeInsets.only(right: 10),
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: MyTheme.accent.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Icon(
+                Icons.expand_more_rounded,
+                size: 16,
+                color: enabled ? MyTheme.accent : MyTheme.border,
+              ),
+            ),
             onChanged: enabled
                 ? (String? newValue) {
                     if (newValue != null && newValue != ref.value) {
@@ -3674,7 +3711,7 @@ class ComboBox extends StatelessWidget {
                 value: value,
                 child: Text(
                   value,
-                  style: const TextStyle(fontSize: 15),
+                  style: const TextStyle(fontSize: 14),
                   overflow: TextOverflow.ellipsis,
                 ).marginOnly(left: 15),
               );
