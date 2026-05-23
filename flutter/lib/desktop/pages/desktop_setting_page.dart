@@ -293,20 +293,17 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    // TajDesk stage 26: the category grid and the section back-bar are pure
+    // navigation and must ALWAYS be clickable. The remote-block (AbsorbPointer)
+    // used to wrap everything, so when access mode is "custom" with remote
+    // config-modification off (canBeBlocked() == true) it swallowed taps on the
+    // tiles and the back button. We now block ONLY the section's option
+    // content, leaving navigation outside the block.
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
-      body: _buildBlock(
-        children: <Widget>[
-          // TajDesk stage 25 (variant C): a category grid is the entry point;
-          // selecting a tile opens that section (the original PageView, kept
-          // intact) with a back button. The old left sidebar is gone.
-          Expanded(
-            child: Obx(() => _showLanding.value
-                ? _landingGrid(context)
-                : _sectionView(context)),
-          ),
-        ],
-      ),
+      body: Obx(() => _showLanding.value
+          ? _landingGrid(context)
+          : _sectionView(context)),
     );
   }
 
@@ -359,20 +356,23 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
   }
 
   // TajDesk stage 25: a single category tile.
+  // Stage 26: higher contrast against the dark page — distinct surface +
+  // visible accent-tinted border so tiles don't melt into the background.
   Widget _landingTile(BuildContext context, _TabInfo tab) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final titleColor = Theme.of(context).textTheme.titleLarge?.color;
-    final borderColor = isDark
-        ? Colors.white.withOpacity(0.07)
-        : Colors.black.withOpacity(0.07);
+    final tileColor =
+        isDark ? const Color(0xFF1E2638) : Colors.white;
+    final borderColor = _accentColor.withOpacity(isDark ? 0.22 : 0.16);
     return SizedBox(
       width: 196,
       height: 120,
       child: Material(
-        color: Theme.of(context).cardColor,
+        color: tileColor,
         borderRadius: BorderRadius.circular(14),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
+          hoverColor: _accentColor.withOpacity(0.08),
           onTap: () {
             final index = DesktopSettingPage.tabKeys.indexOf(tab.key);
             if (index != -1) {
@@ -396,7 +396,7 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
                   height: 42,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: _accentColor.withOpacity(0.12),
+                    color: _accentColor.withOpacity(0.16),
                     borderRadius: BorderRadius.circular(11),
                   ),
                   child: Icon(tab.selected, size: 22, color: _accentColor),
@@ -419,19 +419,27 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
   }
 
   // TajDesk stage 25: a section view = back bar + the original PageView.
+  // Stage 26: back bar stays OUTSIDE the remote-block so it's always usable;
+  // only the option content (PageView) is wrapped in _buildBlock.
   Widget _sectionView(BuildContext context) {
     return Column(
       children: [
         _sectionBackBar(context),
         const Divider(height: 1),
         Expanded(
-          child: Container(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            child: PageView(
-              controller: controller,
-              physics: const NeverScrollableScrollPhysics(),
-              children: _children(),
-            ),
+          child: _buildBlock(
+            children: <Widget>[
+              Expanded(
+                child: Container(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  child: PageView(
+                    controller: controller,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: _children(),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],
