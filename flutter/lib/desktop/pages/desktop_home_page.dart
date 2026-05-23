@@ -1631,8 +1631,8 @@ class _TajIdPassPanelState extends State<_TajIdPassPanel> {
                       Text(
                         id.isEmpty ? '\u2014' : id,
                         style: GoogleFonts.jetBrainsMono(
-                          fontSize: 32,
-                          fontWeight: FontWeight.w700,
+                          fontSize: 38,
+                          fontWeight: FontWeight.w800,
                           letterSpacing: 2,
                           color: textColor,
                           height: 1.0,
