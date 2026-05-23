@@ -79,32 +79,27 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     }
     // TajDesk: responsive layout — top bar with ID/Pass that drops below on narrow windows
     return _buildBlock(
-      child: LayoutBuilder(builder: (context, constraints) {
-        // TajDesk stage 32: threshold 700 -> 860. The centred ID/Pass cards are
-        // 2×280+10 = 570px wide; below ~860 they would overlap the left logo,
-        // so we drop them to their own row earlier.
-        final isNarrow = constraints.maxWidth < 860;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            buildTajTopBar(context, isNarrow: isNarrow),
-            if (isNarrow) buildTajIdPassRow(context),
-            Divider(
-                height: 1,
-                thickness: 1,
-                color: Colors.white.withOpacity(0.05)),
-            Expanded(child: buildTajMainArea(context)),
-          ],
-        );
-      }),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // TajDesk stage 35: header is always clean (logo + settings). The
+          // ID/Password cards moved into the main area, below the connect bar.
+          buildTajTopBar(context),
+          Divider(
+              height: 1,
+              thickness: 1,
+              color: Colors.white.withOpacity(0.05)),
+          Expanded(child: buildTajMainArea(context)),
+        ],
+      ),
     );
   }
 
-  // TajDesk: top bar — wide windows include ID/Pass inline, narrow ones drop them below
-  Widget buildTajTopBar(BuildContext context, {required bool isNarrow}) {
+  // TajDesk: top bar — logo + settings only. ID/Pass moved to main area.
+  Widget buildTajTopBar(BuildContext context) {
     final textColor = Theme.of(context).textTheme.titleLarge?.color;
     return Container(
-      height: isNarrow ? 64 : 96,
+      height: 64,
       color: Theme.of(context).colorScheme.background,
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
       child: ChangeNotifierProvider.value(
@@ -157,19 +152,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 ],
               ),
             ),
-            // Center: ID + Pass (absolutely centered in whole bar) — wide windows only
-            if (!isNarrow)
-              Align(
-                alignment: Alignment.center,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildTajIdCard(context, width: 280),
-                    const SizedBox(width: 10),
-                    _buildTajPassCard(context, width: 280),
-                  ],
-                ),
-              ),
             // Right: settings (aligned to right edge)
             Align(
               alignment: Alignment.centerRight,
@@ -183,18 +165,14 @@ class _DesktopHomePageState extends State<DesktopHomePage>
 
   // TajDesk: ID/Pass row for narrow windows (displayed under top bar)
   Widget buildTajIdPassRow(BuildContext context) {
-    return Container(
-      color: Theme.of(context).colorScheme.background,
-      padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
-      child: ChangeNotifierProvider.value(
-        value: gFFI.serverModel,
-        child: Row(
-          children: [
-            Expanded(child: _buildTajIdCard(context)),
-            const SizedBox(width: 10),
-            Expanded(child: _buildTajPassCard(context)),
-          ],
-        ),
+    return ChangeNotifierProvider.value(
+      value: gFFI.serverModel,
+      child: Row(
+        children: [
+          Expanded(child: _buildTajIdCard(context)),
+          const SizedBox(width: 10),
+          Expanded(child: _buildTajPassCard(context)),
+        ],
       ),
     );
   }
@@ -589,7 +567,16 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   buildRightPane(BuildContext context) {
     return Container(
       color: Theme.of(context).scaffoldBackgroundColor,
-      child: ConnectionPage(),
+      // TajDesk stage 35: ID/Password cards are rendered inside ConnectionPage,
+      // just below the connect bar (constrained to match its width).
+      child: ConnectionPage(
+        belowConnectBar: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: buildTajIdPassRow(context),
+          ),
+        ),
+      ),
     );
   }
 

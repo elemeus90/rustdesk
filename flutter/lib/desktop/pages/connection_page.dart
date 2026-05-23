@@ -191,7 +191,10 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
 
 /// Connection page for connecting to a remote peer.
 class ConnectionPage extends StatefulWidget {
-  const ConnectionPage({Key? key}) : super(key: key);
+  // TajDesk stage 35: optional widget inserted between the connect bar and the
+  // peer list (used to place the ID/Password cards there).
+  final Widget? belowConnectBar;
+  const ConnectionPage({Key? key, this.belowConnectBar}) : super(key: key);
 
   @override
   State<ConnectionPage> createState() => _ConnectionPageState();
@@ -321,6 +324,10 @@ class _ConnectionPageState extends State<ConnectionPage>
               ],
             ).marginOnly(top: 22),
             SizedBox(height: 12),
+            // TajDesk stage 35: ID/Password cards sit here, below the connect
+            // bar and above the peer list.
+            if (widget.belowConnectBar != null)
+              widget.belowConnectBar!.marginOnly(left: 0, right: 12, bottom: 4),
             Divider().paddingOnly(right: 12),
             Expanded(child: PeerTabPage()),
           ],
