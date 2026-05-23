@@ -364,15 +364,18 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
     final tileColor =
         isDark ? const Color(0xFF1E2638) : Colors.white;
     final borderColor = _accentColor.withOpacity(isDark ? 0.22 : 0.16);
+    // TajDesk stage 27: tiles were not clickable — the global desktop theme
+    // disables ink (NoSplash + transparent splash/highlight), which combined
+    // with Material(clipBehavior) swallowed the InkWell hit-test. Use a plain
+    // GestureDetector with HitTestBehavior.opaque so the whole tile area
+    // reliably receives taps independent of the ink machinery.
     return SizedBox(
       width: 196,
       height: 120,
-      child: Material(
-        color: tileColor,
-        borderRadius: BorderRadius.circular(14),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          hoverColor: _accentColor.withOpacity(0.08),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: () {
             final index = DesktopSettingPage.tabKeys.indexOf(tab.key);
             if (index != -1) {
@@ -384,6 +387,7 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
+              color: tileColor,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: borderColor, width: 1),
             ),
@@ -459,10 +463,10 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
         color: Theme.of(context).scaffoldBackgroundColor,
         child: Row(
           children: [
-            Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(9),
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
                 onTap: () => _showLanding.value = true,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
