@@ -1082,12 +1082,9 @@ class _TabState extends State<_Tab> with RestorationMixin {
               : MyTheme.tabbar(context).unSelectedTabIconColor,
         ).paddingOnly(right: 5));
     final labelWidget = Obx(() {
-      // TajDesk stage 33 (variant B): for the top Home/Settings tabs, show the
-      // text label only on the ACTIVE tab; inactive ones are icon-only. Session
-      // tabs (non-main, showing peer id + close) keep their label always.
-      if (widget.tabType == DesktopTabType.main && !isSelected) {
-        return const SizedBox.shrink();
-      }
+      // TajDesk stage 34: reverted the icon-only (variant B) experiment — it
+      // collapsed the inactive tab into an empty-looking gap. Labels are shown
+      // on all tabs again (icon + text), which reads clearly.
       return ConstrainedBox(
           constraints: BoxConstraints(maxWidth: widget.maxLabelWidth ?? 200),
           child: Tooltip(
