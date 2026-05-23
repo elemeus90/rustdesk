@@ -135,6 +135,15 @@ Future<void> initEnv(String appType) async {
 void runMainApp(bool startService) async {
   // register uni links
   await initEnv(kAppTypeMain);
+  // TajDesk stage 33: default the remote view style to "adaptive" (was
+  // "original") on first run. Only set when the user hasn't chosen yet, so an
+  // explicit choice is never overwritten.
+  try {
+    if (bind.mainGetUserDefaultOption(key: kOptionViewStyle).isEmpty) {
+      await bind.mainSetUserDefaultOption(
+          key: kOptionViewStyle, value: kRemoteViewStyleAdaptive);
+    }
+  } catch (_) {}
   checkUpdate();
   // trigger connection status updater
   await bind.mainCheckConnectStatus();

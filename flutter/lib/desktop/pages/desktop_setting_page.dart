@@ -1961,13 +1961,9 @@ class _NetworkState extends State<_Network> with AutomaticKeepAliveClientMixin {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (!hideServer)
-                listTile(
-                  icon: Icons.dns_outlined,
-                  title: 'ID/Relay Server',
-                  onTap: () => showServerSettings(gFFI.dialogManager, setState),
-                ),
-              if (!hideProxy && !hideServer) divider,
+              // TajDesk stage 33: "ID/Relay Server" row removed — the server is
+              // baked into the build, so end users shouldn't (and needn't)
+              // change it. Proxy / WebSocket / etc. remain.
               if (!hideProxy)
                 listTile(
                   icon: Icons.network_ping_outlined,
@@ -2676,93 +2672,147 @@ class _AboutState extends State<_About> {
       const brandDomain = 'tajdesk.tj';
       const brandWebsite = 'https://$brandDomain';
       const brandPrivacy = 'https://$brandDomain/privacy';
-      const linkStyle = TextStyle(decoration: TextDecoration.underline);
       final scrollController = ScrollController();
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      final primaryText = Theme.of(context).textTheme.titleLarge?.color;
+      final secondaryText = primaryText?.withOpacity(0.6);
+      final tertiaryText = primaryText?.withOpacity(0.42);
+      final pillBg = isDark
+          ? Colors.white.withOpacity(0.06)
+          : Colors.black.withOpacity(0.05);
+      final dividerColor = isDark
+          ? Colors.white.withOpacity(0.07)
+          : Colors.black.withOpacity(0.07);
+
+      // TajDesk stage 33: brand About page — logo, version, one-line product
+      // description, action links. Removed the technical Build Date and
+      // Fingerprint rows (irrelevant to end users). The year follows the brand
+      // domain; appName/domain stay build-config driven for easy rebrand.
+      Widget linkRow(IconData icon, String label, VoidCallback onTap) {
+        return InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
+            child: Row(
+              children: [
+                Icon(icon, size: 18, color: MyTheme.accent),
+                const SizedBox(width: 12),
+                Expanded(
+                    child: Text(label,
+                        style: TextStyle(fontSize: 14, color: primaryText))),
+                Icon(Icons.open_in_new, size: 15, color: tertiaryText),
+              ],
+            ),
+          ),
+        );
+      }
+
       return SingleChildScrollView(
         controller: scrollController,
-        child: _Card(title: '${translate('About')} $appName', children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(
-                height: 8.0,
-              ),
-              SelectionArea(
-                  child: Text('${translate('Version')}: $version')
-                      .marginSymmetric(vertical: 4.0)),
-              SelectionArea(
-                  child: Text('${translate('Build Date')}: $buildDate')
-                      .marginSymmetric(vertical: 4.0)),
-              if (!isWeb)
-                SelectionArea(
-                    child: Text('${translate('Fingerprint')}: $fingerprint')
-                        .marginSymmetric(vertical: 4.0)),
-              InkWell(
-                  onTap: () {
-                    launchUrlString(brandPrivacy);
-                  },
-                  child: Text(
-                    translate('Privacy Statement'),
-                    style: linkStyle,
-                  ).marginSymmetric(vertical: 4.0)),
-              InkWell(
-                  onTap: () {
-                    launchUrlString(brandWebsite);
-                  },
-                  child: Text(
-                    translate('Website'),
-                    style: linkStyle,
-                  ).marginSymmetric(vertical: 4.0)),
-              Container(
-                decoration: BoxDecoration(
-                  color: MyTheme.accent,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                padding:
-                    const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                child: SelectionArea(
-                    child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '$appName',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Copyright © ${DateTime.now().toString().substring(0, 4)} $brandDomain · All rights reserved.',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                            ),
-                          ),
-                          if (license.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 2),
-                              child: Text(
-                                license,
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ),
-                        ],
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 460),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(28, 28, 28, 28),
+              child: Column(
+                children: [
+                  // Logo badge.
+                  Container(
+                    width: 64,
+                    height: 64,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: MyTheme.accent.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      appName.isNotEmpty
+                          ? appName.substring(0, 1).toUpperCase()
+                          : 'T',
+                      style: TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w700,
+                        color: MyTheme.accent,
                       ),
                     ),
-                  ],
-                )),
-              ).marginSymmetric(vertical: 4.0)
-            ],
-          ).marginOnly(left: _kContentHMargin)
-        ]),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    appName,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: primaryText,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    brandDomain,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      letterSpacing: 1.2,
+                      color: MyTheme.accent.withOpacity(0.9),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Version pill.
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 13, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: pillBg,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: SelectionArea(
+                      child: Text(
+                        '${translate('Version')} $version',
+                        style: TextStyle(fontSize: 12, color: secondaryText),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // One-line product description.
+                  Text(
+                    'Быстрый и безопасный удалённый доступ к рабочему столу. Подключайтесь к своим устройствам откуда угодно.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.5,
+                      color: secondaryText,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Container(height: 1, color: dividerColor),
+                  const SizedBox(height: 8),
+                  // Action links.
+                  linkRow(Icons.language_outlined, translate('Website'),
+                      () => launchUrlString(brandWebsite)),
+                  linkRow(Icons.shield_outlined,
+                      translate('Privacy Statement'),
+                      () => launchUrlString(brandPrivacy)),
+                  const SizedBox(height: 8),
+                  Container(height: 1, color: dividerColor),
+                  const SizedBox(height: 16),
+                  // Copyright.
+                  Text(
+                    '© ${DateTime.now().toString().substring(0, 4)} $brandDomain',
+                    style: TextStyle(fontSize: 11.5, color: tertiaryText),
+                  ),
+                  if (license.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 3),
+                      child: Text(
+                        license,
+                        style: TextStyle(fontSize: 11, color: tertiaryText),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
       );
     });
   }
