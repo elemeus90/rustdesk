@@ -80,7 +80,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     // TajDesk: responsive layout — top bar with ID/Pass that drops below on narrow windows
     return _buildBlock(
       child: LayoutBuilder(builder: (context, constraints) {
-        final isNarrow = constraints.maxWidth < 700;
+        // TajDesk stage 32: threshold 700 -> 860. The centred ID/Pass cards are
+        // 2×280+10 = 570px wide; below ~860 they would overlap the left logo,
+        // so we drop them to their own row earlier.
+        final isNarrow = constraints.maxWidth < 860;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

@@ -158,7 +158,9 @@ void runMainApp(bool startService) async {
       isMainWindow: true, alwaysOnTop: alwaysOnTop);
   windowManager.waitUntilReadyToShow(windowOptions, () async {
     // TajDesk: lock the main window from being shrunk below a usable size
-    await windowManager.setMinimumSize(const Size(680, 720));
+    // Stage 32: min width 680 -> 800 so the pill tabs, header logo and ID/Pass
+    // cards never collide when the user drags the window narrow.
+    await windowManager.setMinimumSize(const Size(800, 720));
     // Restore the location of the main window before window hide or show.
     await restoreWindowPosition(WindowType.Main);
     // Check the startup argument, if we successfully handle the argument, we keep the main window hidden.
