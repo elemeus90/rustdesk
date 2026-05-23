@@ -194,7 +194,13 @@ class ConnectionPage extends StatefulWidget {
   // TajDesk stage 35: optional widget inserted between the connect bar and the
   // peer list (used to place the ID/Password cards there).
   final Widget? belowConnectBar;
-  const ConnectionPage({Key? key, this.belowConnectBar}) : super(key: key);
+  // TajDesk stage 36: logo (leading) and settings (trailing) widgets placed on
+  // the same top row as the connect bar, forming the header strip.
+  final Widget? leading;
+  final Widget? trailing;
+  const ConnectionPage(
+      {Key? key, this.belowConnectBar, this.leading, this.trailing})
+      : super(key: key);
 
   @override
   State<ConnectionPage> createState() => _ConnectionPageState();
@@ -317,21 +323,35 @@ class _ConnectionPageState extends State<ConnectionPage>
         Expanded(
             child: Column(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildRemoteIDTextField(context),
-              ],
-            ).marginOnly(top: 22),
-            SizedBox(height: 12),
+            // TajDesk stage 36: header strip — logo + connect bar + settings on
+            // one row (the grey top band).
+            Container(
+              color: Theme.of(context).colorScheme.background,
+              padding: const EdgeInsets.fromLTRB(18, 12, 14, 12),
+              child: Row(
+                children: [
+                  if (widget.leading != null) ...[
+                    widget.leading!,
+                    const SizedBox(width: 16),
+                  ],
+                  Expanded(child: _buildRemoteIDTextField(context)),
+                  if (widget.trailing != null) ...[
+                    const SizedBox(width: 12),
+                    widget.trailing!,
+                  ],
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            const SizedBox(height: 12),
             // TajDesk stage 35: ID/Password cards sit here, below the connect
             // bar and above the peer list.
             if (widget.belowConnectBar != null)
               widget.belowConnectBar!.marginOnly(left: 0, right: 12, bottom: 4),
-            Divider().paddingOnly(right: 12),
+            Divider().paddingOnly(right: 12, left: 12),
             Expanded(child: PeerTabPage()),
           ],
-        ).paddingOnly(left: 12.0)),
+        )),
         if (!isOutgoingOnly) const Divider(height: 1),
         if (!isOutgoingOnly) _buildTajStatusBar(context),
       ],
@@ -404,11 +424,9 @@ class _ConnectionPageState extends State<ConnectionPage>
     // unchanged — only the wrapper/field/button chrome is restyled.
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final fieldBg = isDark ? const Color(0xFF1E2638) : Colors.white;
-    var w = Container(
-      child: Column(
-        children: [
-          getConnectionPageTitle(context, false).marginOnly(bottom: 18),
-          Row(
+    // TajDesk stage 36: connect bar lives in the top header now — no title, no
+    // centering wrapper, just the field + button + dropdown row that stretches.
+    var w = Row(
             children: [
               Expanded(
                   child: RawAutocomplete<Peer>(
@@ -511,7 +529,7 @@ class _ConnectionPageState extends State<ConnectionPage>
                                     counterText: '',
                                     hintText: _idInputFocused.value
                                         ? null
-                                        : translate('Enter Remote ID'),
+                                        : 'Введите ID',
                                     contentPadding:
                                         const EdgeInsets.symmetric(
                                             horizontal: 6, vertical: 14)),
@@ -719,11 +737,7 @@ class _ConnectionPageState extends State<ConnectionPage>
                 ),
               ),
             ],
-          ),
-        ],
-      ),
-    );
-    return Container(
-        constraints: const BoxConstraints(maxWidth: 560), child: w);
+          );
+    return w;
   }
 }

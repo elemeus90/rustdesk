@@ -79,87 +79,56 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     }
     // TajDesk: responsive layout — top bar with ID/Pass that drops below on narrow windows
     return _buildBlock(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // TajDesk stage 35: header is always clean (logo + settings). The
-          // ID/Password cards moved into the main area, below the connect bar.
-          buildTajTopBar(context),
-          Divider(
-              height: 1,
-              thickness: 1,
-              color: Colors.white.withOpacity(0.05)),
-          Expanded(child: buildTajMainArea(context)),
-        ],
-      ),
+      child: buildRightPane(context),
     );
   }
 
   // TajDesk: top bar — logo + settings only. ID/Pass moved to main area.
-  Widget buildTajTopBar(BuildContext context) {
+  // TajDesk stage 36: logo block, placed as the leading widget of the header
+  // strip (which now lives inside ConnectionPage, on the connect-bar row).
+  Widget _buildTajLogo(BuildContext context) {
     final textColor = Theme.of(context).textTheme.titleLarge?.color;
-    return Container(
-      height: 64,
-      color: Theme.of(context).colorScheme.background,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-      child: ChangeNotifierProvider.value(
-        value: gFFI.serverModel,
-        child: Stack(
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 44,
+          height: 44,
+          child: Align(
+            alignment: Alignment.center,
+            child: loadLogo(),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Left: logo + name (aligned to left edge)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: 44,
-                    height: 44,
-                    child: Align(
-                      alignment: Alignment.center,
-                      child: loadLogo(),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        bind.mainGetAppNameSync(),
-                        style: GoogleFonts.inter(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                          color: textColor,
-                          letterSpacing: -0.2,
-                          height: 1.1,
-                        ),
-                      ),
-                      if (bind.isCustomClient())
-                        Text(
-                          kTajBrandDomain,
-                          style: GoogleFonts.inter(
-                            fontSize: 10.5,
-                            letterSpacing: 1.6,
-                            color: MyTheme.accent.withOpacity(0.85),
-                            fontWeight: FontWeight.w500,
-                            height: 1.4,
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
+            Text(
+              bind.mainGetAppNameSync(),
+              style: GoogleFonts.inter(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: textColor,
+                letterSpacing: -0.2,
+                height: 1.1,
               ),
             ),
-            // Right: settings (aligned to right edge)
-            Align(
-              alignment: Alignment.centerRight,
-              child: _buildTajSettingsIcon(context),
-            ),
+            if (bind.isCustomClient())
+              Text(
+                kTajBrandDomain,
+                style: GoogleFonts.inter(
+                  fontSize: 10.5,
+                  letterSpacing: 1.6,
+                  color: MyTheme.accent.withOpacity(0.85),
+                  fontWeight: FontWeight.w500,
+                  height: 1.4,
+                ),
+              ),
           ],
         ),
-      ),
+      ],
     );
   }
 
@@ -567,13 +536,34 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   buildRightPane(BuildContext context) {
     return Container(
       color: Theme.of(context).scaffoldBackgroundColor,
-      // TajDesk stage 35: ID/Password cards are rendered inside ConnectionPage,
-      // just below the connect bar (constrained to match its width).
+      // TajDesk stage 36: the connect bar lives in the header strip inside
+      // ConnectionPage. We pass the logo (leading) and settings (trailing) for
+      // that strip, and the UAC/help cards + ID/Password cards as the block
+      // below the connect bar.
       child: ConnectionPage(
-        belowConnectBar: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 560),
-            child: buildTajIdPassRow(context),
+        leading: _buildTajLogo(context),
+        trailing: _buildTajSettingsIcon(context),
+        belowConnectBar: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ChangeNotifierProvider.value(
+                value: gFFI.serverModel,
+                child: FutureBuilder<Widget>(
+                  future: Future.value(
+                      Obx(() => buildHelpCards(stateGlobal.updateUrl.value))),
+                  builder: (_, data) =>
+                      data.hasData ? data.data! : const SizedBox.shrink(),
+                ),
+              ),
+              ChangeNotifierProvider.value(
+                value: gFFI.serverModel,
+                child: buildPresetPasswordWarning(),
+              ),
+              const SizedBox(height: 6),
+              buildTajIdPassRow(context),
+            ],
           ),
         ),
       ),
