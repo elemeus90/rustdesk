@@ -311,8 +311,13 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
   Widget _landingGrid(BuildContext context) {
     final titleColor = Theme.of(context).textTheme.titleLarge?.color;
     final tabs = _settingTabs();
+    // TajDesk stage 28: softer, lighter backdrop — the old near-black
+    // scaffold colour read as a flat dark void. Use a muted graphite in dark
+    // mode and a light grey in light mode so the page feels layered.
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF1C2330) : const Color(0xFFF4F5F8);
     return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
+      color: bg,
       child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(32, 28, 32, 32),
@@ -361,9 +366,11 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
   Widget _landingTile(BuildContext context, _TabInfo tab) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final titleColor = Theme.of(context).textTheme.titleLarge?.color;
+    // TajDesk stage 28: tiles sit a clear step lighter than the (now lighter)
+    // backdrop so the grid reads as raised cards, not flat panels.
     final tileColor =
-        isDark ? const Color(0xFF1E2638) : Colors.white;
-    final borderColor = _accentColor.withOpacity(isDark ? 0.22 : 0.16);
+        isDark ? const Color(0xFF273141) : Colors.white;
+    final borderColor = _accentColor.withOpacity(isDark ? 0.28 : 0.16);
     // TajDesk stage 27: tiles were not clickable — the global desktop theme
     // disables ink (NoSplash + transparent splash/highlight), which combined
     // with Material(clipBehavior) swallowed the InkWell hit-test. Use a plain
@@ -377,12 +384,20 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () {
-            final index = DesktopSettingPage.tabKeys.indexOf(tab.key);
-            if (index != -1) {
-              controller.jumpToPage(index);
-              selectedTab.value = tab.key;
-            }
+            // TajDesk stage 28: the real reason tiles "didn't work" — jumpToPage
+            // was called while the grid is shown, but the PageView lives inside
+            // _sectionView which isn't built yet, so the PageController has no
+            // clients and jumpToPage threw, aborting the handler before
+            // _showLanding could change. Switch to the section first, then jump
+            // on the next frame once the PageView exists.
+            selectedTab.value = tab.key;
             _showLanding.value = false;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              final index = DesktopSettingPage.tabKeys.indexOf(tab.key);
+              if (index != -1 && controller.hasClients) {
+                controller.jumpToPage(index);
+              }
+            });
           },
           child: Container(
             padding: const EdgeInsets.all(16),
