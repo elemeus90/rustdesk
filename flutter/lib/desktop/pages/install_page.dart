@@ -104,7 +104,9 @@ class _InstallPageBodyState extends State<_InstallPageBody>
   }
 
   // TajDesk stage 39: accent rounded checkbox option (replaces stock Checkbox).
-  Widget Option(RxBool option, {String label = ''}) {
+  // BuildContext passed explicitly — `package:path` exports a `Context` type
+  // that shadows the State's context getter here.
+  Widget Option(BuildContext context, RxBool option, {String label = ''}) {
     return InkWell(
       borderRadius: BorderRadius.circular(8),
       onTap: () => btnEnabled.value ? option.value = !option.value : null,
@@ -238,10 +240,10 @@ class _InstallPageBodyState extends State<_InstallPageBody>
                     SizedBox(height: 1.6 * em),
                     // ---- Options ----
                     sectionLabel('Options'),
-                    Option(startmenu,
+                    Option(context, startmenu,
                         label: 'Create start menu shortcuts'),
-                    Option(desktopicon, label: 'Create desktop icon'),
-                    Option(printer, label: 'Install {$appName} Printer'),
+                    Option(context, desktopicon, label: 'Create desktop icon'),
+                    Option(context, printer, label: 'Install {$appName} Printer'),
                     SizedBox(height: 1.4 * em),
                     // ---- Agreement ----
                     Container(
