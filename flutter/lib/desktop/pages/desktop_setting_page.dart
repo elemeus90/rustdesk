@@ -41,6 +41,10 @@ const double _kContentFontSize = 15;
 const Color _accentColor = MyTheme.accent;
 const String _kSettingPageControllerTag = 'settingPageController';
 const String _kSettingPageTabKeyTag = 'settingPageTabKey';
+// TajDesk stage 25 (variant C): tag for the "show category grid vs. open
+// section" landing state, registered in Get so the static switch2page() can
+// drop the user straight into a section when navigated from elsewhere.
+const String _kSettingPageLandingTag = 'settingPageLanding';
 
 class _TabInfo {
   late final SettingsTabKey key;
@@ -102,6 +106,11 @@ class DesktopSettingPage extends StatefulWidget {
         Rx<SettingsTabKey> selected =
             Get.find<Rx<SettingsTabKey>>(tag: _kSettingPageTabKeyTag);
         selected.value = page;
+        // TajDesk stage 25: external navigation should open the section
+        // directly, not the category grid.
+        if (Get.isRegistered<RxBool>(tag: _kSettingPageLandingTag)) {
+          Get.find<RxBool>(tag: _kSettingPageLandingTag).value = false;
+        }
         controller.jumpToPage(index);
       } else {
         DesktopTabPage.onAddSetting(initialPage: page);
@@ -119,6 +128,10 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
         WidgetsBindingObserver {
   late PageController controller;
   late Rx<SettingsTabKey> selectedTab;
+  // TajDesk stage 25 (variant C): when true the category grid is shown;
+  // tapping a tile opens its section and sets this false. The back button in
+  // the section header sets it true again.
+  late RxBool _showLanding;
 
   @override
   bool get wantKeepAlive => true;
@@ -136,6 +149,9 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
     Get.put<Rx<SettingsTabKey>>(selectedTab, tag: _kSettingPageTabKeyTag);
     controller = PageController(initialPage: initialIndex);
     Get.put<PageController>(controller, tag: _kSettingPageControllerTag);
+    // TajDesk stage 25: open on the category grid by default.
+    _showLanding = true.obs;
+    Get.put<RxBool>(_showLanding, tag: _kSettingPageLandingTag);
     controller.addListener(() {
       if (controller.page != null) {
         int page = controller.page!.toInt();
@@ -172,6 +188,7 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
     super.dispose();
     Get.delete<PageController>(tag: _kSettingPageControllerTag);
     Get.delete<RxInt>(tag: _kSettingPageTabKeyTag);
+    Get.delete<RxBool>(tag: _kSettingPageLandingTag);
     WidgetsBinding.instance.removeObserver(this);
     _videoConnTimer?.cancel();
   }
@@ -280,29 +297,207 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
       backgroundColor: Theme.of(context).colorScheme.background,
       body: _buildBlock(
         children: <Widget>[
-          SizedBox(
-            width: _kTabWidth,
-            child: Column(
-              children: [
-                _header(context),
-                Flexible(child: _listView(tabs: _settingTabs())),
-              ],
-            ),
-          ),
-          const VerticalDivider(width: 1),
+          // TajDesk stage 25 (variant C): a category grid is the entry point;
+          // selecting a tile opens that section (the original PageView, kept
+          // intact) with a back button. The old left sidebar is gone.
           Expanded(
-            child: Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              child: PageView(
-                controller: controller,
-                physics: NeverScrollableScrollPhysics(),
-                children: _children(),
-              ),
-            ),
-          )
+            child: Obx(() => _showLanding.value
+                ? _landingGrid(context)
+                : _sectionView(context)),
+          ),
         ],
       ),
     );
+  }
+
+  // TajDesk stage 25: the category landing grid.
+  Widget _landingGrid(BuildContext context) {
+    final titleColor = Theme.of(context).textTheme.titleLarge?.color;
+    final tabs = _settingTabs();
+    return Container(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(32, 28, 32, 32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 3,
+                    height: 24,
+                    margin: const EdgeInsets.only(right: 10),
+                    decoration: BoxDecoration(
+                      color: _accentColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Text(
+                    translate('Settings'),
+                    style: TextStyle(
+                      color: titleColor,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 22),
+              Wrap(
+                spacing: 14,
+                runSpacing: 14,
+                children: tabs.map((t) => _landingTile(context, t)).toList(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // TajDesk stage 25: a single category tile.
+  Widget _landingTile(BuildContext context, _TabInfo tab) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final titleColor = Theme.of(context).textTheme.titleLarge?.color;
+    final borderColor = isDark
+        ? Colors.white.withOpacity(0.07)
+        : Colors.black.withOpacity(0.07);
+    return SizedBox(
+      width: 196,
+      height: 120,
+      child: Material(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () {
+            final index = DesktopSettingPage.tabKeys.indexOf(tab.key);
+            if (index != -1) {
+              controller.jumpToPage(index);
+              selectedTab.value = tab.key;
+            }
+            _showLanding.value = false;
+          },
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: borderColor, width: 1),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: _accentColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: Icon(tab.selected, size: 22, color: _accentColor),
+                ),
+                Text(
+                  translate(tab.label),
+                  style: TextStyle(
+                    color: titleColor,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // TajDesk stage 25: a section view = back bar + the original PageView.
+  Widget _sectionView(BuildContext context) {
+    return Column(
+      children: [
+        _sectionBackBar(context),
+        const Divider(height: 1),
+        Expanded(
+          child: Container(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            child: PageView(
+              controller: controller,
+              physics: const NeverScrollableScrollPhysics(),
+              children: _children(),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // TajDesk stage 25: back bar with the current section's icon + name.
+  Widget _sectionBackBar(BuildContext context) {
+    final titleColor = Theme.of(context).textTheme.titleLarge?.color;
+    return Obx(() {
+      final tabs = _settingTabs();
+      final tab = tabs.firstWhere((t) => t.key == selectedTab.value,
+          orElse: () => tabs.first);
+      return Container(
+        height: 58,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        color: Theme.of(context).scaffoldBackgroundColor,
+        child: Row(
+          children: [
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(9),
+                onTap: () => _showLanding.value = true,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 8),
+                  child: Row(
+                    children: [
+                      Icon(Icons.arrow_back_rounded,
+                          size: 20, color: titleColor?.withOpacity(0.8)),
+                      const SizedBox(width: 6),
+                      Text(
+                        translate('Settings'),
+                        style: TextStyle(
+                          color: titleColor?.withOpacity(0.8),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Container(
+              width: 1,
+              height: 22,
+              margin: const EdgeInsets.symmetric(horizontal: 12),
+              color: titleColor?.withOpacity(0.12),
+            ),
+            Icon(tab.selected, size: 20, color: _accentColor),
+            const SizedBox(width: 8),
+            Text(
+              translate(tab.label),
+              style: TextStyle(
+                color: titleColor,
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.2,
+              ),
+            ),
+          ],
+        ),
+      );
+    });
   }
 
   Widget _header(BuildContext context) {
