@@ -311,13 +311,11 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
   Widget _landingGrid(BuildContext context) {
     final titleColor = Theme.of(context).textTheme.titleLarge?.color;
     final tabs = _settingTabs();
-    // TajDesk stage 28: softer, lighter backdrop — the old near-black
-    // scaffold colour read as a flat dark void. Use a muted graphite in dark
-    // mode and a light grey in light mode so the page feels layered.
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF1C2330) : const Color(0xFFF4F5F8);
+    // TajDesk stage 29: no separate dark panel behind the tiles — they sit
+    // directly on the window background (transparent container), so there's
+    // only one surface, not a dark rectangle floating on another dark colour.
     return Container(
-      color: bg,
+      color: Colors.transparent,
       child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(32, 28, 32, 32),
@@ -351,86 +349,27 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
               Wrap(
                 spacing: 14,
                 runSpacing: 14,
-                children: tabs.map((t) => _landingTile(context, t)).toList(),
+                children: tabs
+                    .map((t) => _CategoryTile(
+                          icon: t.selected,
+                          label: translate(t.label),
+                          onTap: () {
+                            // Stage 28: switch first, jump after PageView built.
+                            selectedTab.value = t.key;
+                            _showLanding.value = false;
+                            WidgetsBinding.instance
+                                .addPostFrameCallback((_) {
+                              final index = DesktopSettingPage.tabKeys
+                                  .indexOf(t.key);
+                              if (index != -1 && controller.hasClients) {
+                                controller.jumpToPage(index);
+                              }
+                            });
+                          },
+                        ))
+                    .toList(),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // TajDesk stage 25: a single category tile.
-  // Stage 26: higher contrast against the dark page — distinct surface +
-  // visible accent-tinted border so tiles don't melt into the background.
-  Widget _landingTile(BuildContext context, _TabInfo tab) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final titleColor = Theme.of(context).textTheme.titleLarge?.color;
-    // TajDesk stage 28: tiles sit a clear step lighter than the (now lighter)
-    // backdrop so the grid reads as raised cards, not flat panels.
-    final tileColor =
-        isDark ? const Color(0xFF273141) : Colors.white;
-    final borderColor = _accentColor.withOpacity(isDark ? 0.28 : 0.16);
-    // TajDesk stage 27: tiles were not clickable — the global desktop theme
-    // disables ink (NoSplash + transparent splash/highlight), which combined
-    // with Material(clipBehavior) swallowed the InkWell hit-test. Use a plain
-    // GestureDetector with HitTestBehavior.opaque so the whole tile area
-    // reliably receives taps independent of the ink machinery.
-    return SizedBox(
-      width: 196,
-      height: 120,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
-            // TajDesk stage 28: the real reason tiles "didn't work" — jumpToPage
-            // was called while the grid is shown, but the PageView lives inside
-            // _sectionView which isn't built yet, so the PageController has no
-            // clients and jumpToPage threw, aborting the handler before
-            // _showLanding could change. Switch to the section first, then jump
-            // on the next frame once the PageView exists.
-            selectedTab.value = tab.key;
-            _showLanding.value = false;
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              final index = DesktopSettingPage.tabKeys.indexOf(tab.key);
-              if (index != -1 && controller.hasClients) {
-                controller.jumpToPage(index);
-              }
-            });
-          },
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: tileColor,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: borderColor, width: 1),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: _accentColor.withOpacity(0.16),
-                    borderRadius: BorderRadius.circular(11),
-                  ),
-                  child: Icon(tab.selected, size: 22, color: _accentColor),
-                ),
-                Text(
-                  translate(tab.label),
-                  style: TextStyle(
-                    color: titleColor,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.1,
-                  ),
-                ),
-              ],
-            ),
           ),
         ),
       ),
@@ -657,6 +596,98 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
 }
 
 //#region pages
+
+// TajDesk stage 29: settings category tile with hover highlight. Uses
+// MouseRegion (onEnter/onExit) for the glow instead of InkWell — InkWell's
+// ink is disabled by the desktop theme, so we drive the highlight ourselves.
+// Tap is handled by an opaque GestureDetector (reliable regardless of ink).
+class _CategoryTile extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _CategoryTile(
+      {Key? key,
+      required this.icon,
+      required this.label,
+      required this.onTap})
+      : super(key: key);
+
+  @override
+  State<_CategoryTile> createState() => _CategoryTileState();
+}
+
+class _CategoryTileState extends State<_CategoryTile> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final titleColor = Theme.of(context).textTheme.titleLarge?.color;
+    final base = isDark ? const Color(0xFF273141) : Colors.white;
+    final hovered = isDark ? const Color(0xFF2F3B50) : const Color(0xFFF1F5FF);
+    final tileColor = _hover ? hovered : base;
+    final borderColor = _accentColor
+        .withOpacity(_hover ? 0.55 : (isDark ? 0.28 : 0.16));
+    return SizedBox(
+      width: 196,
+      height: 120,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 130),
+            curve: Curves.easeOut,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: tileColor,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: borderColor, width: 1),
+              boxShadow: _hover
+                  ? [
+                      BoxShadow(
+                        color: _accentColor.withOpacity(0.18),
+                        blurRadius: 14,
+                        offset: const Offset(0, 4),
+                      )
+                    ]
+                  : null,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: _accentColor.withOpacity(_hover ? 0.24 : 0.16),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: Icon(widget.icon, size: 22, color: _accentColor),
+                ),
+                Text(
+                  widget.label,
+                  style: TextStyle(
+                    color: titleColor,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 
 class _General extends StatefulWidget {
   const _General({Key? key}) : super(key: key);
