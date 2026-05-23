@@ -1002,113 +1002,144 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       }
     }
 
-    // TajDesk: compact single-line banner
+    // TajDesk stage 30: calm info banner — a quiet graphite card with a soft
+    // amber accent strip and a shield chip, instead of the loud full-blue
+    // gradient block. Same content, help link, button and close action.
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1E2638) : const Color(0xFFF4F6FA);
+    const stripColor = Color(0xFFD9883B); // amber
+    final primaryText = Theme.of(context).textTheme.titleLarge?.color;
+    final secondaryText = primaryText?.withOpacity(0.65);
     return Container(
       margin: EdgeInsets.fromLTRB(
           0, marginTop * 0.4, 0, bind.isIncomingOnly() ? marginTop * 0.4 : 0),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+        color: cardBg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: (isDark ? Colors.white : Colors.black).withOpacity(0.06),
+          width: 1,
         ),
-        borderRadius: BorderRadius.circular(8),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.info_outline,
-            color: Colors.white,
-            size: 18,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (title.isNotEmpty)
-                  Text(
-                    translate(title),
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
-                      height: 1.2,
-                    ),
-                  ),
-                if (content.isNotEmpty)
-                  Text(
-                    translate(content),
-                    style: GoogleFonts.inter(
-                      color: Colors.white.withOpacity(0.95),
-                      fontWeight: FontWeight.w400,
-                      fontSize: 12,
-                      height: 1.35,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                if (help != null)
-                  InkWell(
-                    onTap: () async => await launchUrl(Uri.parse(link!)),
-                    child: Text(
-                      translate(help),
-                      style: GoogleFonts.inter(
-                        decoration: TextDecoration.underline,
-                        color: Colors.white,
-                        fontSize: 11,
-                      ),
-                    ).marginOnly(top: 2),
-                  ),
-              ],
-            ),
-          ),
-          if (btnText.isNotEmpty) ...[
-            const SizedBox(width: 12),
-            Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(6),
-                onTap: onPressed,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 7),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.white, width: 1.3),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    translate(btnText),
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-          if (closeButton != null && closeButton == true) ...[
-            const SizedBox(width: 8),
-            InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: closeCard,
+      clipBehavior: Clip.antiAlias,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(width: 3, color: stripColor),
+            Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: Icon(
-                  Icons.close,
-                  color: Colors.white.withOpacity(0.85),
-                  size: 16,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 30,
+                      height: 30,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: stripColor.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.shield_outlined,
+                        color: stripColor,
+                        size: 17,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (title.isNotEmpty)
+                            Text(
+                              translate(title),
+                              style: GoogleFonts.inter(
+                                color: primaryText,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                                height: 1.2,
+                              ),
+                            ),
+                          if (content.isNotEmpty)
+                            Text(
+                              translate(content),
+                              style: GoogleFonts.inter(
+                                color: secondaryText,
+                                fontWeight: FontWeight.w400,
+                                fontSize: 12,
+                                height: 1.35,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          if (help != null)
+                            InkWell(
+                              onTap: () async =>
+                                  await launchUrl(Uri.parse(link!)),
+                              child: Text(
+                                translate(help),
+                                style: GoogleFonts.inter(
+                                  decoration: TextDecoration.underline,
+                                  color: MyTheme.accent,
+                                  fontSize: 11,
+                                ),
+                              ).marginOnly(top: 2),
+                            ),
+                        ],
+                      ),
+                    ),
+                    if (btnText.isNotEmpty) ...[
+                      const SizedBox(width: 12),
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(8),
+                          onTap: onPressed,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: MyTheme.accent,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              translate(btnText),
+                              style: GoogleFonts.inter(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (closeButton != null && closeButton == true) ...[
+                      const SizedBox(width: 6),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: closeCard,
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Icon(
+                            Icons.close,
+                            color: secondaryText,
+                            size: 16,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),
           ],
-        ],
+        ),
       ),
     );
   }

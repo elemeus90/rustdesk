@@ -136,68 +136,71 @@ class _PeerTabPageState extends State<PeerTabPage>
 
   Widget _createSwitchBar(BuildContext context) {
     final model = Provider.of<PeerTabModel>(context);
-    // TajDesk: text-link tabs.
-    // CRITICAL: InkWell requires a Material ancestor to render. The original
-    // ReorderableListView provided one implicitly (for drag-and-drop); a plain
-    // Row/SingleChildScrollView does not, so InkWell collapsed into a grey
-    // placeholder. We wrap the scroll view in a transparent Material to fix it.
+    // TajDesk stage 30: pill-style tabs (variant A). The active tab is a filled
+    // accent pill; the whole row sits in a subtle track. Replaces the
+    // text-with-underline look (which read as stock RustDesk). Selection logic
+    // (handleTabSelection / visibleEnabledOrderedIndexs) is unchanged.
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final trackColor = isDark
+        ? Colors.white.withOpacity(0.05)
+        : Colors.black.withOpacity(0.04);
+    final unselectedColor =
+        MyTheme.tabbar(context).unSelectedTextColor?.withOpacity(0.7) ??
+            (Theme.of(context).textTheme.titleLarge?.color ?? Colors.white)
+                .withOpacity(0.6);
     return Material(
       color: Colors.transparent,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         physics: const ClampingScrollPhysics(),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: model.visibleEnabledOrderedIndexs.map((t) {
-            final selected = model.currentTab == t;
-            final selectedColor =
-                MyTheme.tabbar(context).selectedTextColor ??
-                    Theme.of(context).textTheme.titleLarge?.color ??
-                    Colors.white;
-            final unselectedColor =
-                MyTheme.tabbar(context).unSelectedTextColor?.withOpacity(0.6) ??
-                    selectedColor.withOpacity(0.55);
-            return Tooltip(
-              preferBelow: false,
-              message: model.tabTooltip(t),
-              onTriggered: isMobile ? mobileShowTabVisibilityMenu : null,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(6),
-                onTap: isOptionFixed(kOptionPeerTabIndex)
-                    ? null
-                    : () async {
-                        await handleTabSelection(t);
-                        await bind.setLocalFlutterOption(
-                            k: kOptionPeerTabIndex, v: t.toString());
-                      },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(
-                        width: 2,
-                        color:
-                            selected ? selectedColor : Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            color: trackColor,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: model.visibleEnabledOrderedIndexs.map((t) {
+              final selected = model.currentTab == t;
+              return Tooltip(
+                preferBelow: false,
+                message: model.tabTooltip(t),
+                onTriggered: isMobile ? mobileShowTabVisibilityMenu : null,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(7),
+                  onTap: isOptionFixed(kOptionPeerTabIndex)
+                      ? null
+                      : () async {
+                          await handleTabSelection(t);
+                          await bind.setLocalFlutterOption(
+                              k: kOptionPeerTabIndex, v: t.toString());
+                        },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    curve: Curves.easeOut,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: selected ? MyTheme.accent : Colors.transparent,
+                      borderRadius: BorderRadius.circular(7),
+                    ),
+                    child: Text(
+                      model.tabTooltip(t),
+                      style: TextStyle(
+                        color: selected ? Colors.white : unselectedColor,
+                        fontSize: 13,
+                        fontWeight:
+                            selected ? FontWeight.w600 : FontWeight.w500,
+                        letterSpacing: 0.1,
                       ),
                     ),
                   ),
-                  child: Text(
-                    model.tabTooltip(t),
-                    style: TextStyle(
-                      color: selected ? selectedColor : unselectedColor,
-                      fontSize: 13,
-                      fontWeight: selected
-                          ? FontWeight.w600
-                          : FontWeight.w500,
-                      letterSpacing: 0.1,
-                    ),
-                  ),
-                ),
-              ).paddingSymmetric(horizontal: 2),
-            );
-          }).toList(),
+                ).paddingSymmetric(horizontal: 1),
+              );
+            }).toList(),
+          ),
         ),
       ),
     );
