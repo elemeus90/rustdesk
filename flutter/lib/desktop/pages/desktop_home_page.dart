@@ -134,15 +134,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
 
   // TajDesk: ID/Pass row for narrow windows (displayed under top bar)
   Widget buildTajIdPassRow(BuildContext context) {
+    // TajDesk stage 37: centered, form-less ID + password. ID shown large and
+    // centered (click copies); password shown as dots with eye/copy/refresh.
     return ChangeNotifierProvider.value(
       value: gFFI.serverModel,
-      child: Row(
-        children: [
-          Expanded(child: _buildTajIdCard(context)),
-          const SizedBox(width: 10),
-          Expanded(child: _buildTajPassCard(context)),
-        ],
-      ),
+      child: const _TajIdPassPanel(),
     );
   }
 
@@ -1573,4 +1569,236 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
       onCancel: close,
     );
   });
+}
+
+// TajDesk stage 37: form-less, centered ID + one-time password.
+// - ID: large centered digits; click copies to clipboard.
+// - Password: shown as dots; eye toggles visibility, click copies the REAL
+//   password, refresh generates a new one. Logic uses serverModel (same as the
+//   old cards): serverId/serverPasswd text, mainUpdateTemporaryPassword().
+class _TajIdPassPanel extends StatefulWidget {
+  const _TajIdPassPanel({Key? key}) : super(key: key);
+
+  @override
+  State<_TajIdPassPanel> createState() => _TajIdPassPanelState();
+}
+
+class _TajIdPassPanelState extends State<_TajIdPassPanel> {
+  bool _showPass = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = Theme.of(context).textTheme.titleLarge?.color;
+    final labelColor = textColor?.withOpacity(0.5);
+    final iconColor = textColor?.withOpacity(0.55);
+    return Consumer<ServerModel>(
+      builder: (context, model, _) {
+        final showOneTime = model.approveMode != 'click' &&
+            model.verificationMethod != kUsePermanentPassword;
+        final id = model.serverId.text;
+        final pass = model.serverPasswd.text;
+        final dots = '\u2022' * (pass.isEmpty ? 8 : pass.length);
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // ---- ID ----
+              Text(
+                translate('ID'),
+                style: GoogleFonts.inter(
+                  fontSize: 10.5,
+                  letterSpacing: 1.6,
+                  fontWeight: FontWeight.w600,
+                  color: labelColor,
+                ),
+              ),
+              const SizedBox(height: 4),
+              _CopyableValue(
+                onTap: id.isEmpty
+                    ? null
+                    : () {
+                        Clipboard.setData(ClipboardData(text: id));
+                        showToast(translate('Copied'));
+                      },
+                tooltip: translate('Copy'),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        id.isEmpty ? '\u2014' : id,
+                        style: GoogleFonts.jetBrainsMono(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 2,
+                          color: textColor,
+                          height: 1.0,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Icon(Icons.copy_rounded, size: 17, color: iconColor),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // ---- One-time password ----
+              Text(
+                translate('One-time Password'),
+                style: GoogleFonts.inter(
+                  fontSize: 10.5,
+                  letterSpacing: 1.6,
+                  fontWeight: FontWeight.w600,
+                  color: labelColor,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _CopyableValue(
+                    onTap: (!showOneTime || pass.isEmpty)
+                        ? null
+                        : () {
+                            Clipboard.setData(ClipboardData(text: pass));
+                            showToast(translate('Copied'));
+                          },
+                    tooltip: translate('Copy'),
+                    child: Text(
+                      pass.isEmpty
+                          ? '\u2014'
+                          : (_showPass ? pass : dots),
+                      style: GoogleFonts.jetBrainsMono(
+                        fontSize: 21,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: _showPass ? 1 : 4,
+                        color: textColor?.withOpacity(0.85),
+                        height: 1.0,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  _IconBtn(
+                    icon: _showPass
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    color: iconColor,
+                    tooltip: translate(_showPass ? 'Hide' : 'Show'),
+                    onTap: () => setState(() => _showPass = !_showPass),
+                  ),
+                  if (showOneTime) ...[
+                    const SizedBox(width: 2),
+                    _IconBtn(
+                      icon: Icons.refresh_rounded,
+                      color: iconColor,
+                      tooltip: translate('Refresh'),
+                      onTap: () => bind.mainUpdateTemporaryPassword(),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// TajDesk stage 37: a value that copies on click, with hover highlight.
+class _CopyableValue extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+  final String? tooltip;
+  const _CopyableValue({Key? key, required this.child, this.onTap, this.tooltip})
+      : super(key: key);
+
+  @override
+  State<_CopyableValue> createState() => _CopyableValueState();
+}
+
+class _CopyableValueState extends State<_CopyableValue> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final w = MouseRegion(
+      cursor: widget.onTap == null
+          ? SystemMouseCursors.basic
+          : SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: _hover && widget.onTap != null
+                ? MyTheme.accent.withOpacity(0.08)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: widget.child,
+        ),
+      ),
+    );
+    if (widget.tooltip != null && widget.onTap != null) {
+      return Tooltip(message: widget.tooltip!, child: w);
+    }
+    return w;
+  }
+}
+
+// TajDesk stage 37: small icon button with hover.
+class _IconBtn extends StatefulWidget {
+  final IconData icon;
+  final Color? color;
+  final String? tooltip;
+  final VoidCallback onTap;
+  const _IconBtn(
+      {Key? key,
+      required this.icon,
+      required this.onTap,
+      this.color,
+      this.tooltip})
+      : super(key: key);
+
+  @override
+  State<_IconBtn> createState() => _IconBtnState();
+}
+
+class _IconBtnState extends State<_IconBtn> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: widget.tooltip ?? '',
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTap,
+          child: Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: _hover
+                  ? MyTheme.accent.withOpacity(0.12)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(widget.icon, size: 17, color: widget.color),
+          ),
+        ),
+      ),
+    );
+  }
 }
