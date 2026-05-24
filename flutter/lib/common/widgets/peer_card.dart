@@ -345,23 +345,12 @@ class _PeerCardState extends State<_PeerCard>
                         child: Icon(Icons.key,
                             size: 10, color: MyTheme.accent),
                       ),
-                    Positioned(
-                      bottom: -2,
-                      right: -2,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.background,
-                          shape: BoxShape.circle,
-                        ),
-                        child: getOnline(8, peer.online),
-                      ),
-                    ),
                   ],
                 ),
               ),
               const SizedBox(width: 12),
-              // Middle: host name + id (status moved onto the icon)
+              // TajDesk stage 41: status dot moved back next to the ID (was
+              // overlapping the OS icon and looked off). OS icon stays clean.
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -384,15 +373,25 @@ class _PeerCardState extends State<_PeerCard>
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      displayId,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: mutedColor,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    Row(
+                      children: [
+                        getOnline(7, peer.online),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            displayId,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: mutedColor,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures()
+                              ],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                     if (_showNote(peer))
                       Padding(
