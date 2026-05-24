@@ -322,31 +322,46 @@ class _PeerCardState extends State<_PeerCard>
         padding: const EdgeInsets.all(10),
           child: Row(
             children: [
-              // Left: platform icon in a tinted square
+              // TajDesk stage 40 (variant F): OS icon in a round accent plate
+              // (replaces the str2color square — the RustDesk look) with the
+              // online status dot sitting on the plate. OS stays visible.
               Container(
-                width: 56,
-                height: 56,
+                width: 52,
+                height: 52,
                 decoration: BoxDecoration(
-                  color: str2color('${peer.id}${peer.platform}', 0x66),
-                  borderRadius: BorderRadius.circular(10),
+                  color: MyTheme.accent.withOpacity(0.15),
+                  shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
                 child: Stack(
+                  clipBehavior: Clip.none,
                   alignment: Alignment.center,
                   children: [
-                    getPlatformImage(peer.platform, size: 32),
+                    getPlatformImage(peer.platform, size: 28),
                     if (_shouldBuildPasswordIcon(peer))
-                      const Positioned(
-                        top: 2,
-                        left: 2,
+                      Positioned(
+                        top: 0,
+                        left: 0,
                         child: Icon(Icons.key,
-                            size: 10, color: Colors.white),
+                            size: 10, color: MyTheme.accent),
                       ),
+                    Positioned(
+                      bottom: -2,
+                      right: -2,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.background,
+                          shape: BoxShape.circle,
+                        ),
+                        child: getOnline(8, peer.online),
+                      ),
+                    ),
                   ],
                 ),
               ),
               const SizedBox(width: 12),
-              // Middle: host name + status + id
+              // Middle: host name + id (status moved onto the icon)
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -369,25 +384,15 @@ class _PeerCardState extends State<_PeerCard>
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        getOnline(7, peer.online),
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: Text(
-                            displayId,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: mutedColor,
-                              fontFeatures: const [
-                                FontFeature.tabularFigures()
-                              ],
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
+                    Text(
+                      displayId,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: mutedColor,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     if (_showNote(peer))
                       Padding(
