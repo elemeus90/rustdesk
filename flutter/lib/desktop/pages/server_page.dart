@@ -213,6 +213,20 @@ class ConnectionManagerState extends State<ConnectionManager>
               },
               pageViewBuilder: (pageView) => LayoutBuilder(
                 builder: (context, constrains) {
+                  // TajDesk stage 43: the chat side-panel is only shown AFTER
+                  // the connection is authorized. Before the user accepts, a
+                  // chat makes no sense (the peer isn't connected yet) and just
+                  // left an empty pane when the window was widened. So even if
+                  // the window is wide, we hide chat until `authorized`.
+                  final selIdx = serverModel.tabController.state.value.selected;
+                  final selClient = (selIdx >= 0 &&
+                          selIdx < serverModel.clients.length)
+                      ? serverModel.clients[selIdx]
+                      : null;
+                  final chatAuthorized = selClient?.authorized ?? false;
+                  final wantChat = chatAuthorized &&
+                      constrains.maxWidth >
+                          kConnectionManagerWindowSizeClosedChat.width;
                   var borderWidth = 0.0;
                   if (constrains.maxWidth >
                       kConnectionManagerWindowSizeClosedChat.width) {
@@ -225,14 +239,15 @@ class ConnectionManagerState extends State<ConnectionManager>
                   if (borderWidth < 0 || borderWidth > 50) {
                     borderWidth = 0;
                   }
-                  final realClosedWidth =
-                      kConnectionManagerWindowSizeClosedChat.width -
-                          borderWidth;
+                  // When chat is hidden, the control page takes the full width.
+                  final realClosedWidth = wantChat
+                      ? kConnectionManagerWindowSizeClosedChat.width -
+                          borderWidth
+                      : constrains.maxWidth;
                   final realChatPageWidth =
                       constrains.maxWidth - realClosedWidth;
                   final row = Row(children: [
-                    if (constrains.maxWidth >
-                        kConnectionManagerWindowSizeClosedChat.width)
+                    if (wantChat)
                       Consumer<ChatModel>(
                           builder: (_, model, child) => SizedBox(
                                 width: realChatPageWidth,
