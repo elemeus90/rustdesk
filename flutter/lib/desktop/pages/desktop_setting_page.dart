@@ -709,7 +709,6 @@ class _GeneralState extends State<_General> {
       children: [
         if (!isWeb) service(),
         theme(),
-        _Card(title: 'Language', icon: Icons.language, children: [language()]),
         if (!isWeb) hwcodec(),
         if (!isWeb) audio(context),
         if (!isWeb) record(context),
@@ -727,6 +726,9 @@ class _GeneralState extends State<_General> {
     }
 
     final isOptFixed = isOptionFixed(kCommConfKeyTheme);
+    // TajDesk stage 45: Theme + Language merged into one "Appearance"-style
+    // group (fewer cards, less scrolling). Theme radios first, then a labelled
+    // language row. Keeps RU-translatable titles.
     return _Card(title: 'Theme', icon: Icons.brightness_6_outlined, children: [
       _Radio<String>(context,
           value: 'light',
@@ -743,6 +745,7 @@ class _GeneralState extends State<_General> {
           groupValue: current,
           label: 'Follow System',
           onChanged: isOptFixed ? null : onChanged),
+      _LabeledSelectRow(label: 'Language', child: language()),
     ]);
   }
 
@@ -1103,7 +1106,7 @@ class _GeneralState extends State<_General> {
           if (!isWeb) bind.mainChangeLanguage(lang: key);
         },
         enabled: !isOptFixed,
-      ).marginOnly(left: _kContentHMargin);
+      );
     });
   }
 }
@@ -2821,6 +2824,32 @@ class _AboutState extends State<_About> {
 //#endregion
 
 //#region components
+
+// ignore: non_constant_identifier_names
+// TajDesk stage 45: a settings row with a label on the left and a control
+// (e.g. a dropdown) on the right — "Name      Value v" — for the grouped,
+// system-style settings look.
+// ignore: non_constant_identifier_names
+Widget _LabeledSelectRow({required String label, required Widget child}) {
+  return Builder(builder: (context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Text(
+            translate(label),
+            style: TextStyle(
+              fontSize: _kContentFontSize,
+              color: Theme.of(context).textTheme.titleLarge?.color,
+            ),
+          ),
+          const Spacer(),
+          Flexible(child: child),
+        ],
+      ),
+    );
+  });
+}
 
 // ignore: non_constant_identifier_names
 Widget _Card(
