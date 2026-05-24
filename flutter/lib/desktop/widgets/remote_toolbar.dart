@@ -521,7 +521,7 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
         triggerAutoHide();
       }
       final borderRadius = BorderRadius.vertical(
-        bottom: Radius.circular(5),
+        bottom: Radius.circular(14),
       );
       return Offstage(
         offstage: _dragging.isTrue,
@@ -550,7 +550,7 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
         triggerAutoHide();
       }
       final borderRadius = BorderRadius.vertical(
-        bottom: Radius.circular(5),
+        bottom: Radius.circular(14),
       );
       // TajDesk stage 17: restored to the original RustDesk behaviour —
       // the chip is always positioned by FractionalOffset(_fractionX, 0)
@@ -651,7 +651,9 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
     }
     rowChildren.add(SizedBox(width: _ToolbarTheme.buttonHMargin * 2));
 
-    final toolbarBorderRadius = BorderRadius.all(Radius.circular(12.0));
+    // TajDesk stage 42 (variant A1): single rounded "pill" (radius 24) instead
+    // of the boxy RustDesk panel. Grouping dividers + buttons are unchanged.
+    final toolbarBorderRadius = BorderRadius.all(Radius.circular(24.0));
     return ClipRRect(
       borderRadius: toolbarBorderRadius,
       child: BackdropFilter(
@@ -3036,11 +3038,11 @@ class _DraggableShowHideState extends State<_DraggableShowHide> {
     return Draggable(
       axis: Axis.horizontal,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 3),
         child: Icon(
           Icons.drag_indicator,
-          size: 18,
-          color: Colors.white.withOpacity(0.55),
+          size: 14,
+          color: Colors.white.withOpacity(0.4),
         ),
       ),
       feedback: widget,
@@ -3098,7 +3100,7 @@ class _DraggableShowHideState extends State<_DraggableShowHide> {
       padding: MaterialStateProperty.all(EdgeInsets.zero),
     );
     final isFullscreen = stateGlobal.fullscreen;
-    const double iconSize = 20;
+    const double iconSize = 16;
 
     buttonWrapper(VoidCallback? onPressed, Widget child,
         {Color? hoverColor}) {
