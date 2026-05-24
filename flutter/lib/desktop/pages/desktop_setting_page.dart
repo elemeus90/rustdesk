@@ -2829,89 +2829,88 @@ Widget _Card(
     List<Widget>? title_suffix,
     IconData? icon,
     bool dividers = false}) {
-  // TajDesk stage 23 (variant A): centred section column instead of the
-  // left-pinned card that left a large empty gutter on wide windows. Optional
-  // leading icon tile in the header (Material icons) and optional thin
-  // dividers between option rows give the page a modern SaaS / Linear feel and
-  // remove the last of the stock-RustDesk look. Section title is now sentence
-  // case rather than a shouty all-caps line.
+  // TajDesk stage 44 (variant A): iOS/macOS-style grouped list instead of the
+  // RustDesk "stack of boxes". Section title is a small all-caps label OUTSIDE
+  // the block; the options sit as rows inside one rounded group, separated by
+  // thin inset dividers. This breaks the stock-RustDesk settings look at the
+  // structural level (not just colour). Applies to every settings tab via this
+  // shared component. The `dividers` arg is kept for API compat but rows are now
+  // always divided.
   return Builder(builder: (context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final borderColor = MyTheme.accent.withOpacity(0.12);
     final headerColor =
-        Theme.of(context).textTheme.titleLarge?.color?.withOpacity(0.75);
+        Theme.of(context).textTheme.titleLarge?.color?.withOpacity(0.45);
+    final borderColor = isDark
+        ? Colors.white.withOpacity(0.07)
+        : Colors.black.withOpacity(0.07);
     final dividerColor = isDark
         ? Colors.white.withOpacity(0.06)
         : Colors.black.withOpacity(0.06);
 
-    // Interleave thin dividers between option rows when requested.
+    // Each option becomes a row with consistent padding; thin inset dividers
+    // separate them.
     final List<Widget> body = [];
-    final mapped = children
-        .map((e) => e.marginOnly(top: 4, right: _kContentHMargin))
-        .toList();
-    for (int i = 0; i < mapped.length; i++) {
-      if (dividers && i > 0) {
+    for (int i = 0; i < children.length; i++) {
+      if (i > 0) {
         body.add(Container(
           height: 1,
-          margin: const EdgeInsets.fromLTRB(_kContentHMargin, 8, 0, 4),
+          margin: const EdgeInsets.only(left: 16),
           color: dividerColor,
         ));
       }
-      body.add(mapped[i]);
+      body.add(Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        child: children[i],
+      ));
     }
 
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: _kCardFixedWidth),
-        child: Container(
-          width: double.infinity,
-          margin: const EdgeInsets.only(top: 15),
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: borderColor, width: 1),
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                    _kContentHMargin, 12, _kContentHMargin, 6),
-                child: Row(
-                  children: [
-                    if (icon != null)
-                      Container(
-                        width: 26,
-                        height: 26,
-                        margin: const EdgeInsets.only(right: 10),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: MyTheme.accent.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(7),
-                        ),
-                        child: Icon(icon, size: 16, color: MyTheme.accent),
-                      ),
-                    Expanded(
-                      child: Text(
-                        translate(title),
-                        textAlign: TextAlign.start,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.1,
-                          color: headerColor,
-                        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Section header — small all-caps label outside the block.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 20, 8, 8),
+              child: Row(
+                children: [
+                  if (icon != null)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Icon(icon, size: 14, color: MyTheme.accent),
+                    ),
+                  Expanded(
+                    child: Text(
+                      translate(title).toUpperCase(),
+                      textAlign: TextAlign.start,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1.1,
+                        color: headerColor,
                       ),
                     ),
-                    ...?title_suffix
-                  ],
-                ),
+                  ),
+                  ...?title_suffix
+                ],
               ),
-              ...body,
-              const SizedBox(height: 6),
-            ],
-          ),
+            ),
+            // Grouped block of rows.
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: borderColor, width: 1),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: body,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -2962,60 +2961,42 @@ Widget _OptionCheckBox(
     enabled = false;
   }
 
-  return GestureDetector(
-    child: Obx(
-      () {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        final active = enabled && !isOptFixed;
-        return Row(
-          children: [
-            // TajDesk stage 23: rounded accent checkbox instead of the stock
-            // square Material checkbox.
-            Container(
-              width: 18,
-              height: 18,
-              margin: const EdgeInsets.only(right: 8),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: ref.value
-                    ? (active
-                        ? MyTheme.accent
-                        : MyTheme.accent.withOpacity(0.5))
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(5),
-                border: ref.value
-                    ? null
-                    : Border.all(
-                        color: active
-                            ? (isDark
-                                ? Colors.white.withOpacity(0.45)
-                                : Colors.black.withOpacity(0.35))
-                            : Colors.grey.withOpacity(0.4),
-                        width: 1.5,
-                      ),
-              ),
-              child: ref.value
-                  ? const Icon(Icons.check, size: 13, color: Colors.white)
-                  : null,
-            ),
-            Offstage(
-              offstage: !ref.value || checkedIcon == null,
-              child: checkedIcon?.marginOnly(right: 5),
-            ),
-            Expanded(
+  // TajDesk stage 44 (variant A): label on the left, accent toggle switch on
+  // the right (iOS/macOS style) instead of a leading square checkbox. Switch
+  // is themed accent globally (stage 24). Padding comes from _Card row wrapper.
+  return Obx(
+    () {
+      final active = enabled && !isOptFixed;
+      return InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: active ? () => onChanged(!ref.value) : null,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 7),
+          child: Row(
+            children: [
+              Expanded(
                 child: Text(
-              translate(label),
-              style: TextStyle(color: disabledTextColor(context, enabled)),
-            ))
-          ],
-        );
-      },
-    ).marginOnly(left: _kCheckBoxLeftMargin),
-    onTap: enabled && !isOptFixed
-        ? () {
-            onChanged(!ref.value);
-          }
-        : null,
+                  translate(label),
+                  style: TextStyle(
+                    fontSize: _kContentFontSize,
+                    color: disabledTextColor(context, enabled),
+                  ),
+                ),
+              ),
+              if (checkedIcon != null && ref.value)
+                checkedIcon.marginOnly(right: 8),
+              Transform.scale(
+                scale: 0.85,
+                child: Switch(
+                  value: ref.value,
+                  onChanged: active ? (v) => onChanged(v) : null,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
   );
 }
 
@@ -3034,19 +3015,22 @@ Widget _Radio<T>(BuildContext context,
         }
       : null;
   return GestureDetector(
-    child: Row(
-      children: [
-        Radio<T>(value: value, groupValue: groupValue, onChanged: onChange2),
-        Expanded(
-          child: Text(translate(label),
-                  overflow: autoNewLine ? null : TextOverflow.ellipsis,
-                  style: TextStyle(
-                      fontSize: _kContentFontSize,
-                      color: disabledTextColor(context, onChange2 != null)))
-              .marginOnly(left: 5),
-        ),
-      ],
-    ).marginOnly(left: _kRadioLeftMargin),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        children: [
+          Radio<T>(value: value, groupValue: groupValue, onChanged: onChange2),
+          Expanded(
+            child: Text(translate(label),
+                    overflow: autoNewLine ? null : TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: _kContentFontSize,
+                        color: disabledTextColor(context, onChange2 != null)))
+                .marginOnly(left: 8),
+          ),
+        ],
+      ),
+    ),
     onTap: () => onChange2?.call(value),
   );
 }
