@@ -28,7 +28,7 @@ import 'package:window_size/window_size.dart' as window_size;
 import '../widgets/button.dart';
 
 // TajDesk: single source of truth for brand domain — change here on rebrand.
-const String kTajBrandDomain = 'tajdesk.tj';
+const String kTajBrandDomain = 'corpdesk.app';
 
 class DesktopHomePage extends StatefulWidget {
   const DesktopHomePage({Key? key}) : super(key: key);

@@ -2672,7 +2672,7 @@ class _AboutState extends State<_About> {
       // TajDesk: dynamic app name and domain — pulled from build config so
       // a future rebrand only needs to be done in rdgen, not in source code.
       final appName = bind.mainGetAppNameSync();
-      const brandDomain = 'tajdesk.tj';
+      const brandDomain = 'corpdesk.app';
       const brandWebsite = 'https://$brandDomain';
       const brandPrivacy = 'https://$brandDomain/privacy';
       final scrollController = ScrollController();

@@ -281,7 +281,7 @@ class _InstallPageBodyState extends State<_InstallPageBody>
                                 InkWell(
                                   hoverColor: Colors.transparent,
                                   onTap: () => launchUrlString(
-                                      'https://tajdesk.tj/privacy'),
+                                      'https://corpdesk.app/privacy'),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [

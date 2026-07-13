@@ -1086,7 +1086,7 @@ void showAbout(OverlayDialogManager dialogManager) {
   dialogManager.show((setState, close, context) {
     // TajDesk: dynamic brand
     final appName = bind.mainGetAppNameSync();
-    const brandDomain = 'tajdesk.tj';
+    const brandDomain = 'corpdesk.app';
     return CustomAlertDialog(
       title: Text('${translate('About')} $appName'),
       content: Wrap(direction: Axis.vertical, spacing: 12, children: [
